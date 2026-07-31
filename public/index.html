@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Panel de monitoreo para un tacho inteligente IoT">
+  <title>Tacho Inteligente IoT</title>
+  <link rel="stylesheet" href="estilos.css">
+</head>
+<body>
+  <main class="contenedor">
+    <header class="encabezado">
+      <div>
+        <p class="etiqueta">MONITOREO EN TIEMPO REAL</p>
+        <h1>Tacho Inteligente IoT</h1>
+        <p class="subtitulo">Control de capacidad y estado del dispositivo</p>
+      </div>
+      <div id="conexion" class="conexion desconectado" role="status" aria-live="polite">
+        <span class="punto" aria-hidden="true"></span>
+        <span id="textoConexion">ESP32 desconectado</span>
+      </div>
+    </header>
+
+    <section class="resumen" aria-label="Resumen del tacho">
+      <article class="tarjeta ubicacion-tarjeta">
+        <div class="icono" aria-hidden="true">⌖</div>
+        <div>
+          <p class="rotulo">Ubicación</p>
+          <h2 id="ubicacion">Sin ubicación</h2>
+          <p id="identificador" class="detalle">ID: tacho-01</p>
+        </div>
+      </article>
+
+      <article id="estadoTarjeta" class="tarjeta estado-tarjeta sin-datos">
+        <p class="rotulo">Estado del tacho</p>
+        <p id="estado" class="estado-principal">Sin datos</p>
+        <p class="detalle">Clasificación automática por nivel</p>
+      </article>
+    </section>
+
+    <section class="panel-grid" aria-label="Detalles de la medición">
+      <article class="tarjeta nivel-tarjeta">
+        <div class="nivel-cabecera">
+          <div>
+            <p class="rotulo">Porcentaje de llenado</p>
+            <p id="nivel" class="numero-grande">0<span>%</span></p>
+          </div>
+          <div class="medidor-icono" aria-hidden="true">♻</div>
+        </div>
+        <div class="barra-fondo" role="progressbar" aria-label="Nivel de llenado" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+          <div id="barraNivel" class="barra-nivel"></div>
+        </div>
+        <div class="escala"><span>Vacío</span><span>Capacidad máxima</span></div>
+      </article>
+
+      <article class="tarjeta dato-tarjeta">
+        <div class="icono secundario" aria-hidden="true">↕</div>
+        <p class="rotulo">Distancia interior</p>
+        <p id="distancia" class="valor-dato">—</p>
+      </article>
+
+      <article class="tarjeta dato-tarjeta">
+        <div class="icono secundario" aria-hidden="true">▱</div>
+        <p class="rotulo">Estado de la tapa</p>
+        <p id="tapa" class="valor-dato">Cerrada</p>
+      </article>
+
+      <article class="tarjeta dato-tarjeta actualizacion-tarjeta">
+        <div class="icono secundario" aria-hidden="true">◷</div>
+        <p class="rotulo">Última actualización</p>
+        <p id="ultimaActualizacion" class="valor-dato fecha">Aún no hay mediciones</p>
+      </article>
+    </section>
+
+    <section class="acciones" aria-label="Acciones de prueba">
+      <button id="actualizarBtn" class="boton secundario-btn" type="button">Actualizar ahora</button>
+      <button id="probarBtn" class="boton principal-btn" type="button">Simular tacho lleno</button>
+    </section>
+    <p id="mensaje" class="mensaje" role="status" aria-live="polite"></p>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>

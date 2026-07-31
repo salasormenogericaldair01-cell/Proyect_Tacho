@@ -1,0 +1,15 @@
+{
+  "name": "tacho-servidor",
+  "version": "1.0.0",
+  "description": "Servidor y panel web para un tacho inteligente IoT",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=20 <25"
+  },
+  "dependencies": {
+    "express": "^5.1.0"
+  }
+}
