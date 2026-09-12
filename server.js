@@ -6,6 +6,7 @@ const PORT = process.env.PORT || 3000;
 
 // La medición se conserva en memoria mientras el proceso del servidor esté activo.
 let ultimaMedicion = null;
+let ultimaAlerta = null;
 
 const estadoInicial = {
   id: 'tacho-01',
@@ -76,6 +77,32 @@ app.post('/api/medicion', (req, res) => {
 
 app.get('/api/estado', (_req, res) => {
   res.json(ultimaMedicion || estadoInicial);
+});
+
+// Registra una alerta operativa con la última medición real disponible.
+// No intenta enviar correos o SMS porque el proyecto no tiene esos servicios configurados.
+app.post('/api/alerta', (_req, res) => {
+  if (!ultimaMedicion) {
+    return res.status(409).json({
+      success: false,
+      error: 'No se puede generar una alerta antes de recibir una medición.'
+    });
+  }
+
+  ultimaAlerta = {
+    id: ultimaMedicion.id,
+    ubicacion: ultimaMedicion.ubicacion,
+    nivel: ultimaMedicion.nivel,
+    estado: ultimaMedicion.estado,
+    tipo: 'manual',
+    creadaEn: new Date().toISOString()
+  };
+
+  return res.status(201).json({
+    success: true,
+    mensaje: 'Alerta registrada en el servidor.',
+    alerta: ultimaAlerta
+  });
 });
 
 // Permite comprobar todo el panel antes de conectar físicamente el ESP32.

@@ -3,80 +3,166 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="Panel de monitoreo para un tacho inteligente IoT">
-  <title>Tacho Inteligente IoT</title>
+  <meta name="description" content="Panel de monitoreo en tiempo real para el Tacho Inteligente IoT">
+  <meta name="theme-color" content="#0d4f3c">
+  <title>Tacho Inteligente IoT | Project Tacho</title>
   <link rel="stylesheet" href="estilos.css">
 </head>
 <body>
   <main class="contenedor">
     <header class="encabezado">
-      <div>
-        <p class="etiqueta">MONITOREO EN TIEMPO REAL</p>
-        <h1>Tacho Inteligente IoT</h1>
-        <p class="subtitulo">Control de capacidad y estado del dispositivo</p>
+      <div class="marca">
+        <div class="marca-icono" aria-hidden="true">
+          <svg viewBox="0 0 24 24">
+            <path d="M8 7h8l-.7 12.1a2 2 0 0 1-2 1.9h-2.6a2 2 0 0 1-2-1.9L8 7Z"/>
+            <path d="M6 7h12M9.5 4h5M12 11v6M9.8 11.5l.3 5M14.2 11.5l-.3 5"/>
+          </svg>
+        </div>
+        <div>
+          <p class="etiqueta">PROJECT TACHO</p>
+          <h1>Tacho Inteligente <span>IoT</span></h1>
+          <p class="subtitulo">Monitoreo de capacidad y operación en tiempo real</p>
+        </div>
       </div>
-      <div id="conexion" class="conexion desconectado" role="status" aria-live="polite">
+
+      <div id="conexion" class="conexion consultando" role="status" aria-live="polite">
         <span class="punto" aria-hidden="true"></span>
-        <span id="textoConexion">ESP32 desconectado</span>
+        <span>
+          <strong id="textoConexion">Conectando con el servidor</strong>
+          <small id="detalleConexion">Consultando datos...</small>
+        </span>
       </div>
     </header>
 
-    <section class="resumen" aria-label="Resumen del tacho">
-      <article class="tarjeta ubicacion-tarjeta">
-        <div class="icono" aria-hidden="true">⌖</div>
-        <div>
-          <p class="rotulo">Ubicación</p>
-          <h2 id="ubicacion">Sin ubicación</h2>
-          <p id="identificador" class="detalle">ID: tacho-01</p>
+    <section id="alertaNivel" class="alerta-nivel" role="alert" hidden>
+      <div class="alerta-icono" aria-hidden="true">!</div>
+      <div class="alerta-contenido">
+        <p class="alerta-etiqueta">ALERTA DE CAPACIDAD</p>
+        <h2>Tacho lleno — requiere recojo</h2>
+        <p id="alertaDetalle">Nivel crítico detectado.</p>
+      </div>
+      <span id="alertaPorcentaje" class="alerta-porcentaje">—</span>
+    </section>
+
+    <section class="resumen" aria-label="Identificación y estado del tacho">
+      <article class="tarjeta identidad-tarjeta">
+        <div class="icono-tarjeta" aria-hidden="true">
+          <svg viewBox="0 0 24 24">
+            <path d="M20 10c0 5-8 11-8 11S4 15 4 10a8 8 0 1 1 16 0Z"/>
+            <circle cx="12" cy="10" r="2.5"/>
+          </svg>
+        </div>
+        <div class="identidad-datos">
+          <p class="rotulo">Ubicación del dispositivo</p>
+          <h2 id="ubicacion">—</h2>
+          <p id="identificador" class="detalle">ID: —</p>
         </div>
       </article>
 
       <article id="estadoTarjeta" class="tarjeta estado-tarjeta sin-datos">
-        <p class="rotulo">Estado del tacho</p>
-        <p id="estado" class="estado-principal">Sin datos</p>
-        <p class="detalle">Clasificación automática por nivel</p>
+        <div>
+          <p class="rotulo">Estado general</p>
+          <p id="estado" class="estado-principal">Sin datos</p>
+        </div>
+        <span class="estado-indicador" aria-hidden="true"></span>
       </article>
     </section>
 
-    <section class="panel-grid" aria-label="Detalles de la medición">
+    <section class="panel-grid" aria-label="Detalles de la última medición">
       <article class="tarjeta nivel-tarjeta">
-        <div class="nivel-cabecera">
+        <div class="nivel-superior">
           <div>
-            <p class="rotulo">Porcentaje de llenado</p>
-            <p id="nivel" class="numero-grande">0<span>%</span></p>
+            <p class="rotulo">Nivel de llenado</p>
+            <p class="numero-grande"><span id="nivel">—</span><small id="unidadNivel"></small></p>
           </div>
-          <div class="medidor-icono" aria-hidden="true">♻</div>
+          <div class="lectura-chip">
+            <span class="pulso" aria-hidden="true"></span>
+            Sensor ultrasónico
+          </div>
         </div>
-        <div class="barra-fondo" role="progressbar" aria-label="Nivel de llenado" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
-          <div id="barraNivel" class="barra-nivel"></div>
+
+        <div class="barra-area">
+          <div id="barraFondo" class="barra-fondo" role="progressbar" aria-label="Nivel de llenado" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-valuetext="Sin datos">
+            <div id="barraNivel" class="barra-nivel"></div>
+          </div>
+          <div class="marcadores" aria-hidden="true">
+            <span>0%</span>
+            <span class="marca-70">70%</span>
+            <span class="marca-85">85%</span>
+            <span>100%</span>
+          </div>
         </div>
-        <div class="escala"><span>Vacío</span><span>Capacidad máxima</span></div>
       </article>
 
       <article class="tarjeta dato-tarjeta">
-        <div class="icono secundario" aria-hidden="true">↕</div>
-        <p class="rotulo">Distancia interior</p>
+        <div class="dato-cabecera">
+          <div class="icono-dato" aria-hidden="true">
+            <svg viewBox="0 0 24 24">
+              <path d="M12 3v18M8.5 6.5 12 3l3.5 3.5M8.5 17.5 12 21l3.5-3.5"/>
+            </svg>
+          </div>
+          <span class="dato-tipo">CM</span>
+        </div>
+        <p class="rotulo">Distancia medida</p>
         <p id="distancia" class="valor-dato">—</p>
+        <p class="dato-ayuda">Lectura interior del sensor</p>
       </article>
 
       <article class="tarjeta dato-tarjeta">
-        <div class="icono secundario" aria-hidden="true">▱</div>
+        <div class="dato-cabecera">
+          <div class="icono-dato" aria-hidden="true">
+            <svg viewBox="0 0 24 24">
+              <path d="M6 9h12l-1 12H7L6 9ZM5 9h14M9 5h6M10 5V3h4v2"/>
+            </svg>
+          </div>
+          <span id="tapaPunto" class="mini-estado" aria-hidden="true"></span>
+        </div>
         <p class="rotulo">Estado de la tapa</p>
-        <p id="tapa" class="valor-dato">Cerrada</p>
+        <p id="tapa" class="valor-dato">—</p>
+        <p class="dato-ayuda">Detección de apertura</p>
       </article>
 
       <article class="tarjeta dato-tarjeta actualizacion-tarjeta">
-        <div class="icono secundario" aria-hidden="true">◷</div>
+        <div class="dato-cabecera">
+          <div class="icono-dato" aria-hidden="true">
+            <svg viewBox="0 0 24 24">
+              <circle cx="12" cy="12" r="9"/>
+              <path d="M12 7v5l3 2"/>
+            </svg>
+          </div>
+          <span class="dato-tipo">UTC-5</span>
+        </div>
         <p class="rotulo">Última actualización</p>
-        <p id="ultimaActualizacion" class="valor-dato fecha">Aún no hay mediciones</p>
+        <p id="ultimaActualizacion" class="valor-dato fecha">Esperando la primera medición</p>
+        <p id="tiempoRelativo" class="dato-ayuda">Sin datos recibidos</p>
       </article>
     </section>
 
-    <section class="acciones" aria-label="Acciones de prueba">
-      <button id="actualizarBtn" class="boton secundario-btn" type="button">Actualizar ahora</button>
-      <button id="probarBtn" class="boton principal-btn" type="button">Simular tacho lleno</button>
+    <section class="tarjeta centro-alertas" aria-labelledby="tituloAcciones">
+      <div class="centro-alertas-texto">
+        <div class="icono-alerta-manual" aria-hidden="true">
+          <svg viewBox="0 0 24 24">
+            <path d="M18 9a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9ZM10 21h4"/>
+          </svg>
+        </div>
+        <div>
+          <h2 id="tituloAcciones">Centro de alertas</h2>
+          <p>Registra una alerta operativa con la última medición disponible. No envía correo ni SMS.</p>
+        </div>
+      </div>
+      <button id="alertaBtn" class="boton alerta-btn" type="button" disabled>Enviar alerta</button>
     </section>
-    <p id="mensaje" class="mensaje" role="status" aria-live="polite"></p>
+
+    <section class="pie-panel" aria-label="Controles del panel">
+      <p id="mensaje" class="mensaje" role="status" aria-live="polite"></p>
+      <div class="acciones">
+        <button id="actualizarBtn" class="boton secundario-btn" type="button">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6v5h-5M4 18v-5h5M18.5 9A7 7 0 0 0 6.8 6.8L4 11M20 13l-2.8 4.2A7 7 0 0 1 5.5 15"/></svg>
+          Actualizar ahora
+        </button>
+        <button id="probarBtn" class="boton prueba-btn" type="button">Simular tacho lleno</button>
+      </div>
+    </section>
   </main>
 
   <script src="app.js"></script>
