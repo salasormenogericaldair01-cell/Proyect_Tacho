@@ -1,30 +1,83 @@
 const INTERVALO_CONSULTA = 3000;
 const UMBRAL_DATOS_RECIENTES = 30000;
+const CLASES_ESTADO = ['disponible', 'casi-lleno', 'requiere-recojo', 'sin-datos'];
 
 const elementos = {
+  heroDashboard: document.querySelector('#heroDashboard'),
+  redIoT: document.querySelector('#redIoT'),
+  dispositivoId: document.querySelector('#dispositivoId'),
   ubicacion: document.querySelector('#ubicacion'),
-  identificador: document.querySelector('#identificador'),
+  estadoOnline: document.querySelector('#estadoOnline'),
   estado: document.querySelector('#estado'),
-  estadoTarjeta: document.querySelector('#estadoTarjeta'),
+  estadoCapsula: document.querySelector('#estadoCapsula'),
+  estadoDescripcion: document.querySelector('#estadoDescripcion'),
   nivel: document.querySelector('#nivel'),
   unidadNivel: document.querySelector('#unidadNivel'),
+  tachoFigura: document.querySelector('#tachoFigura'),
+  tachoCuerpo: document.querySelector('#tachoCuerpo'),
+  rellenoTacho: document.querySelector('#rellenoTacho'),
   barraNivel: document.querySelector('#barraNivel'),
   barraFondo: document.querySelector('#barraFondo'),
   distancia: document.querySelector('#distancia'),
+  sensorEstado: document.querySelector('#sensorEstado'),
+  sensorPunto: document.querySelector('#sensorPunto'),
   tapa: document.querySelector('#tapa'),
+  tapaDetalle: document.querySelector('#tapaDetalle'),
   tapaPunto: document.querySelector('#tapaPunto'),
   ultimaActualizacion: document.querySelector('#ultimaActualizacion'),
   tiempoRelativo: document.querySelector('#tiempoRelativo'),
   conexion: document.querySelector('#conexion'),
   textoConexion: document.querySelector('#textoConexion'),
   detalleConexion: document.querySelector('#detalleConexion'),
+  monitoreoBtn: document.querySelector('#monitoreoBtn'),
+  monitoreoIcono: document.querySelector('#monitoreoIcono'),
+  monitoreoTexto: document.querySelector('#monitoreoTexto'),
+  anilloConsulta: document.querySelector('#anilloConsulta'),
+  proximaConsulta: document.querySelector('#proximaConsulta'),
+  servidorEstado: document.querySelector('#servidorEstado'),
+  servidorDetalle: document.querySelector('#servidorDetalle'),
+  servidorPunto: document.querySelector('#servidorPunto'),
+  railSensor: document.querySelector('#railSensor'),
+  railSensorTexto: document.querySelector('#railSensorTexto'),
+  railTapa: document.querySelector('#railTapa'),
+  railTapaTexto: document.querySelector('#railTapaTexto'),
+  railServidor: document.querySelector('#railServidor'),
+  railServidorTexto: document.querySelector('#railServidorTexto'),
   alertaNivel: document.querySelector('#alertaNivel'),
   alertaDetalle: document.querySelector('#alertaDetalle'),
   alertaPorcentaje: document.querySelector('#alertaPorcentaje'),
   mensaje: document.querySelector('#mensaje'),
   actualizarBtn: document.querySelector('#actualizarBtn'),
   probarBtn: document.querySelector('#probarBtn'),
-  alertaBtn: document.querySelector('#alertaBtn')
+  alertaBtn: document.querySelector('#alertaBtn'),
+  panelInteractivo: document.querySelector('#panelInteractivo'),
+  tabsVista: document.querySelectorAll('.tab-vista'),
+  vistasInteractivas: document.querySelectorAll('.vista-interactiva'),
+  graficoVacio: document.querySelector('#graficoVacio'),
+  areaGrafico: document.querySelector('#areaGrafico'),
+  lineaGrafico: document.querySelector('#lineaGrafico'),
+  puntosGrafico: document.querySelector('#puntosGrafico'),
+  graficoMin: document.querySelector('#graficoMin'),
+  graficoMax: document.querySelector('#graficoMax'),
+  graficoLecturas: document.querySelector('#graficoLecturas'),
+  graficoSecuencia: document.querySelector('#graficoSecuencia'),
+  actividadLista: document.querySelector('#actividadLista'),
+  actividadVacia: document.querySelector('#actividadVacia'),
+  actividadContador: document.querySelector('#actividadContador'),
+  diagnosticoLatencia: document.querySelector('#diagnosticoLatencia'),
+  diagnosticoHttp: document.querySelector('#diagnosticoHttp'),
+  diagnosticoMonitoreo: document.querySelector('#diagnosticoMonitoreo'),
+  diagnosticoProxima: document.querySelector('#diagnosticoProxima'),
+  diagnosticoMedicion: document.querySelector('#diagnosticoMedicion'),
+  diagnosticoCampos: document.querySelector('#diagnosticoCampos'),
+  centroAlertas: document.querySelector('#centroAlertas'),
+  tituloAcciones: document.querySelector('#tituloAcciones'),
+  alertaOperativaChip: document.querySelector('#alertaOperativaChip'),
+  alertaOperativaEstado: document.querySelector('#alertaOperativaEstado'),
+  alertaOperativaDatos: document.querySelector('#alertaOperativaDatos'),
+  alertaOperativaId: document.querySelector('#alertaOperativaId'),
+  alertaOperativaUbicacion: document.querySelector('#alertaOperativaUbicacion'),
+  alertaOperativaNivel: document.querySelector('#alertaOperativaNivel')
 };
 
 let fechaUltimaMedicion = null;
@@ -32,7 +85,22 @@ let hayMedicion = false;
 let servidorDisponible = false;
 let consultaEnCurso = false;
 let alertaEnCurso = false;
+let nivelMostrado = null;
+let animacionNivel = null;
 let temporizadorMensaje = null;
+let temporizadorPulso = null;
+let temporizadorConsulta = null;
+let proximaConsultaEn = null;
+let monitoreoPausado = false;
+let ultimaLatencia = null;
+let ultimoEstadoHttp = 'Pendiente';
+let ultimaMedicionRegistrada = null;
+let datosAnteriores = null;
+let escaneoEnCurso = false;
+let conexionInterrumpida = false;
+let datosObsoletosDetectados = false;
+const historialMediciones = [];
+const eventosSesion = [];
 
 function claseSegunEstado(estado) {
   const clases = {
@@ -44,8 +112,141 @@ function claseSegunEstado(estado) {
   return clases[estado] || 'sin-datos';
 }
 
+function estadoSegunNivel(nivel, estadoRecibido) {
+  if (Number.isFinite(nivel)) {
+    if (nivel >= 85) return 'Requiere recojo';
+    if (nivel >= 70) return 'Casi lleno';
+    return 'Disponible';
+  }
+
+  return ['Disponible', 'Casi lleno', 'Requiere recojo'].includes(estadoRecibido)
+    ? estadoRecibido
+    : 'Sin datos';
+}
+
+function descripcionSegunEstado(estado) {
+  const descripciones = {
+    'Disponible': 'Capacidad operativa dentro del rango normal',
+    'Casi lleno': 'El tacho se aproxima al límite de capacidad',
+    'Requiere recojo': 'Capacidad crítica: coordinar el recojo'
+  };
+
+  return descripciones[estado] || 'Esperando la primera medición del dispositivo';
+}
+
 function formatearNumero(valor) {
   return valor.toLocaleString('es-PE', { maximumFractionDigits: 1 });
+}
+
+function iniciarRedIoT() {
+  const canvas = elementos.redIoT;
+  const contexto = canvas.getContext('2d');
+  const movimientoReducido = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const puntero = { x: 0, y: 0, activo: false };
+  let ancho = 0;
+  let alto = 0;
+  let nodos = [];
+  let ultimoFotograma = 0;
+
+  function colorAcento() {
+    if (elementos.heroDashboard.classList.contains('requiere-recojo')) return [255, 92, 98];
+    if (elementos.heroDashboard.classList.contains('casi-lleno')) return [242, 184, 75];
+    return [46, 230, 157];
+  }
+
+  function ajustarCanvas() {
+    const limites = canvas.getBoundingClientRect();
+    const escala = Math.min(window.devicePixelRatio || 1, 1.5);
+    ancho = Math.max(1, limites.width);
+    alto = Math.max(1, limites.height);
+    canvas.width = Math.round(ancho * escala);
+    canvas.height = Math.round(alto * escala);
+    contexto.setTransform(escala, 0, 0, escala, 0, 0);
+    nodos = Array.from({ length: ancho < 600 ? 18 : 30 }, (_, indice) => ({
+      x: Math.random() * ancho,
+      y: Math.random() * alto,
+      radio: 1 + Math.random() * 1.5,
+      fase: Math.random() * Math.PI * 2,
+      velocidad: .00018 + Math.random() * .00022,
+      direccion: indice % 2 ? 1 : -1
+    }));
+    dibujarRed(performance.now(), true);
+  }
+
+  function dibujarRed(ahora, fotogramaUnico = false) {
+    if (!fotogramaUnico && ahora - ultimoFotograma < 32) {
+      window.requestAnimationFrame(dibujarRed);
+      return;
+    }
+    ultimoFotograma = ahora;
+    contexto.clearRect(0, 0, ancho, alto);
+    const [rojo, verde, azul] = colorAcento();
+    const posiciones = nodos.map((nodo) => ({
+      x: nodo.x + Math.sin(ahora * nodo.velocidad + nodo.fase) * 12 * nodo.direccion,
+      y: nodo.y + Math.cos(ahora * nodo.velocidad * .8 + nodo.fase) * 9,
+      radio: nodo.radio
+    }));
+
+    for (let i = 0; i < posiciones.length; i += 1) {
+      for (let j = i + 1; j < posiciones.length; j += 1) {
+        const distanciaX = posiciones[i].x - posiciones[j].x;
+        const distanciaY = posiciones[i].y - posiciones[j].y;
+        const distancia = Math.hypot(distanciaX, distanciaY);
+        if (distancia > 145) continue;
+        contexto.beginPath();
+        contexto.moveTo(posiciones[i].x, posiciones[i].y);
+        contexto.lineTo(posiciones[j].x, posiciones[j].y);
+        contexto.strokeStyle = `rgba(${rojo}, ${verde}, ${azul}, ${(1 - distancia / 145) * .13})`;
+        contexto.lineWidth = .7;
+        contexto.stroke();
+      }
+    }
+
+    posiciones.forEach((nodo) => {
+      contexto.beginPath();
+      contexto.arc(nodo.x, nodo.y, nodo.radio, 0, Math.PI * 2);
+      contexto.fillStyle = `rgba(${rojo}, ${verde}, ${azul}, .42)`;
+      contexto.fill();
+    });
+
+    if (puntero.activo) {
+      posiciones.forEach((nodo) => {
+        const distancia = Math.hypot(nodo.x - puntero.x, nodo.y - puntero.y);
+        if (distancia > 175) return;
+        contexto.beginPath();
+        contexto.moveTo(nodo.x, nodo.y);
+        contexto.lineTo(puntero.x, puntero.y);
+        contexto.strokeStyle = `rgba(${rojo}, ${verde}, ${azul}, ${(1 - distancia / 175) * .32})`;
+        contexto.lineWidth = 1;
+        contexto.stroke();
+      });
+      contexto.beginPath();
+      contexto.arc(puntero.x, puntero.y, 3, 0, Math.PI * 2);
+      contexto.fillStyle = `rgba(${rojo}, ${verde}, ${azul}, .8)`;
+      contexto.fill();
+    }
+
+    if (!movimientoReducido && !fotogramaUnico) window.requestAnimationFrame(dibujarRed);
+  }
+
+  elementos.heroDashboard.addEventListener('pointermove', (evento) => {
+    if (evento.pointerType !== 'mouse') return;
+    const limites = elementos.heroDashboard.getBoundingClientRect();
+    puntero.x = evento.clientX - limites.left;
+    puntero.y = evento.clientY - limites.top;
+    puntero.activo = true;
+  });
+  elementos.heroDashboard.addEventListener('pointerleave', () => {
+    puntero.activo = false;
+  });
+
+  if ('ResizeObserver' in window) {
+    new ResizeObserver(ajustarCanvas).observe(elementos.heroDashboard);
+  } else {
+    window.addEventListener('resize', ajustarCanvas);
+  }
+  ajustarCanvas();
+  if (!movimientoReducido) window.requestAnimationFrame(dibujarRed);
 }
 
 function describirTiempoTranscurrido(fecha) {
@@ -61,17 +262,279 @@ function describirTiempoTranscurrido(fecha) {
   const horas = Math.floor(minutos / 60);
   if (horas < 24) return `Recibido hace ${horas} h`;
 
-  const dias = Math.floor(horas / 24);
-  return `Recibido hace ${dias} d`;
+  return `Recibido hace ${Math.floor(horas / 24)} d`;
+}
+
+function actualizarGrafico() {
+  const niveles = historialMediciones.map((medicion) => medicion.nivel);
+  elementos.graficoLecturas.textContent = String(niveles.length);
+  elementos.graficoVacio.hidden = niveles.length > 0;
+
+  if (niveles.length === 0) {
+    elementos.graficoMin.textContent = '—';
+    elementos.graficoMax.textContent = '—';
+    elementos.graficoSecuencia.textContent = 'Esperando la primera lectura real.';
+    elementos.lineaGrafico.setAttribute('points', '');
+    elementos.areaGrafico.setAttribute('d', '');
+    elementos.puntosGrafico.replaceChildren();
+    return;
+  }
+
+  elementos.graficoMin.textContent = `${formatearNumero(Math.min(...niveles))}%`;
+  elementos.graficoMax.textContent = `${formatearNumero(Math.max(...niveles))}%`;
+  elementos.graficoSecuencia.textContent = `Evolución: ${niveles
+    .map((nivel) => `${formatearNumero(nivel)}%`)
+    .join(' → ')}`;
+
+  const anchoInicio = 36;
+  const anchoFinal = 580;
+  const base = 190;
+  const altoUtil = 160;
+  const puntos = historialMediciones.map((medicion, indice) => {
+    const x = niveles.length === 1
+      ? (anchoInicio + anchoFinal) / 2
+      : anchoInicio + (indice / (niveles.length - 1)) * (anchoFinal - anchoInicio);
+    const y = base - (medicion.nivel / 100) * altoUtil;
+    return { ...medicion, x, y };
+  });
+
+  const coordenadas = puntos.map((punto) => `${punto.x.toFixed(1)},${punto.y.toFixed(1)}`).join(' ');
+  elementos.lineaGrafico.setAttribute('points', coordenadas);
+  elementos.areaGrafico.setAttribute(
+    'd',
+    `M ${puntos[0].x.toFixed(1)} ${base} L ${coordenadas.replaceAll(',', ' ')} L ${puntos.at(-1).x.toFixed(1)} ${base} Z`
+  );
+
+  const fragmento = document.createDocumentFragment();
+  puntos.forEach((punto) => {
+    const circulo = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    const titulo = document.createElementNS('http://www.w3.org/2000/svg', 'title');
+    circulo.setAttribute('cx', punto.x.toFixed(1));
+    circulo.setAttribute('cy', punto.y.toFixed(1));
+    circulo.setAttribute('r', '5');
+    titulo.textContent = `${formatearNumero(punto.nivel)}% · ${punto.fecha.toLocaleTimeString('es-PE')}`;
+    circulo.appendChild(titulo);
+    fragmento.appendChild(circulo);
+  });
+  elementos.puntosGrafico.replaceChildren(fragmento);
+  elementos.lineaGrafico.classList.remove('actualizada');
+  void elementos.lineaGrafico.getBoundingClientRect();
+  elementos.lineaGrafico.classList.add('actualizada');
+}
+
+function registrarEvento(titulo, detalle, tipo = '') {
+  const evento = { titulo, detalle, tipo, fecha: new Date() };
+  eventosSesion.push(evento);
+  elementos.actividadVacia?.remove();
+
+  const item = document.createElement('li');
+  if (tipo) item.classList.add(`evento-${tipo}`);
+  const contenido = document.createElement('div');
+  const tituloElemento = document.createElement('strong');
+  const detalleElemento = document.createElement('span');
+  const horaElemento = document.createElement('time');
+  tituloElemento.textContent = titulo;
+  detalleElemento.textContent = detalle;
+  horaElemento.dateTime = evento.fecha.toISOString();
+  horaElemento.textContent = evento.fecha.toLocaleTimeString('es-PE', {
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit'
+  });
+  contenido.append(tituloElemento, detalleElemento, horaElemento);
+  item.appendChild(contenido);
+  elementos.actividadLista.prepend(item);
+
+  while (elementos.actividadLista.children.length > 10) {
+    elementos.actividadLista.lastElementChild.remove();
+  }
+  elementos.actividadContador.textContent = String(eventosSesion.length);
+}
+
+function registrarMedicionSesion(datos, nivel, fecha, estadoActual) {
+  if (nivel === null || fecha.toISOString() === ultimaMedicionRegistrada) return;
+
+  ultimaMedicionRegistrada = fecha.toISOString();
+  historialMediciones.push({ nivel, fecha });
+  if (historialMediciones.length > 18) historialMediciones.shift();
+  actualizarGrafico();
+
+  registrarEvento(
+    'Nueva medición recibida',
+    `${formatearNumero(nivel)}% de capacidad · ${formatearNumero(datos.distancia)} cm`
+  );
+
+  if (datosAnteriores?.estado && datosAnteriores.estado !== estadoActual) {
+    registrarEvento(
+      `Estado: ${estadoActual}`,
+      `Cambió desde ${datosAnteriores.estado}`,
+      estadoActual === 'Requiere recojo' ? 'alerta' : 'sistema'
+    );
+  }
+
+  if (datosAnteriores?.tapa && datosAnteriores.tapa !== datos.tapa) {
+    registrarEvento(
+      `Tapa ${datos.tapa}`,
+      'Cambio detectado por el dispositivo',
+      datos.tapa === 'abierta' ? 'sistema' : ''
+    );
+  }
+
+  if (datosAnteriores && datosAnteriores.nivel < 70 && nivel >= 70) {
+    registrarEvento('Tacho alcanzó 70%', `${formatearNumero(nivel)}% · casi lleno`, 'sistema');
+  }
+
+  if (nivel >= 85 && (!datosAnteriores || datosAnteriores.nivel < 85)) {
+    registrarEvento('Tacho requiere recojo', `${formatearNumero(nivel)}% · capacidad crítica`, 'alerta');
+  }
+
+  if (datosAnteriores && Math.abs(nivel - datosAnteriores.nivel) >= 15) {
+    registrarEvento(
+      'Cambio importante de nivel',
+      `${formatearNumero(datosAnteriores.nivel)}% → ${formatearNumero(nivel)}%`,
+      'sistema'
+    );
+  }
+
+  datosAnteriores = { nivel, estado: estadoActual, tapa: datos.tapa };
+}
+
+function actualizarDiagnostico() {
+  elementos.diagnosticoLatencia.textContent = Number.isFinite(ultimaLatencia)
+    ? `${ultimaLatencia} ms`
+    : '—';
+  elementos.diagnosticoHttp.textContent = ultimoEstadoHttp;
+  elementos.diagnosticoMonitoreo.textContent = monitoreoPausado ? 'Pausada' : 'Automática';
+  elementos.diagnosticoMedicion.textContent = hayMedicion ? 'Recibida' : 'No recibida';
+  elementos.diagnosticoCampos.textContent = hayMedicion
+    ? 'Nivel, distancia y tapa válidos'
+    : 'Esperando dispositivo';
+}
+
+function cambiarVista(nombreVista) {
+  elementos.tabsVista.forEach((tab) => {
+    const activa = tab.dataset.vista === nombreVista;
+    tab.classList.toggle('activo', activa);
+    tab.setAttribute('aria-selected', String(activa));
+  });
+
+  elementos.vistasInteractivas.forEach((vista) => {
+    const activa = vista.id === `vista${nombreVista.charAt(0).toUpperCase() + nombreVista.slice(1)}`;
+    vista.classList.toggle('activo', activa);
+    vista.hidden = !activa;
+  });
+}
+
+function actualizarCuentaRegresiva() {
+  actualizarDiagnostico();
+
+  if (monitoreoPausado) {
+    elementos.proximaConsulta.textContent = 'Pulsa para reanudar';
+    elementos.diagnosticoProxima.textContent = 'Sin consultas automáticas';
+    elementos.anilloConsulta.style.setProperty('--progreso', '0deg');
+    return;
+  }
+
+  if (!proximaConsultaEn) {
+    elementos.proximaConsulta.textContent = 'Sincronizando ahora...';
+    elementos.diagnosticoProxima.textContent = 'Consulta en curso';
+    elementos.anilloConsulta.style.setProperty('--progreso', '360deg');
+    return;
+  }
+
+  const restante = Math.max(0, proximaConsultaEn - Date.now());
+  const segundos = Math.max(1, Math.ceil(restante / 1000));
+  const progreso = Math.min(360, Math.max(0, (1 - restante / INTERVALO_CONSULTA) * 360));
+  elementos.proximaConsulta.textContent = `Próxima lectura en ${segundos} s`;
+  elementos.diagnosticoProxima.textContent = `Siguiente consulta en ${segundos} s`;
+  elementos.anilloConsulta.style.setProperty('--progreso', `${progreso}deg`);
+}
+
+function programarProximaConsulta() {
+  window.clearTimeout(temporizadorConsulta);
+  if (monitoreoPausado) {
+    proximaConsultaEn = null;
+    actualizarCuentaRegresiva();
+    return;
+  }
+
+  proximaConsultaEn = Date.now() + INTERVALO_CONSULTA;
+  temporizadorConsulta = window.setTimeout(async () => {
+    proximaConsultaEn = null;
+    await consultarEstado();
+    programarProximaConsulta();
+  }, INTERVALO_CONSULTA);
+  actualizarCuentaRegresiva();
+}
+
+async function alternarMonitoreo() {
+  monitoreoPausado = !monitoreoPausado;
+  elementos.monitoreoBtn.setAttribute('aria-pressed', String(monitoreoPausado));
+  elementos.monitoreoIcono.setAttribute('href', monitoreoPausado ? '#icon-play' : '#icon-pausa');
+  elementos.monitoreoTexto.textContent = monitoreoPausado ? 'Monitoreo pausado' : 'Monitoreo automático';
+
+  if (monitoreoPausado) {
+    window.clearTimeout(temporizadorConsulta);
+    proximaConsultaEn = null;
+    registrarEvento('Monitoreo pausado', 'Las consultas automáticas fueron detenidas', 'sistema');
+    actualizarCuentaRegresiva();
+    return;
+  }
+
+  registrarEvento('Monitoreo reanudado', 'Consultas automáticas cada 3 segundos', 'sistema');
+  await consultarEstado();
+  programarProximaConsulta();
+}
+
+async function explorarTelemetria() {
+  if (escaneoEnCurso) return;
+  escaneoEnCurso = true;
+  elementos.tachoFigura.setAttribute('aria-busy', 'true');
+  elementos.heroDashboard.classList.add('escaneando');
+  elementos.tachoFigura.classList.remove('explorando');
+  void elementos.tachoFigura.offsetWidth;
+  elementos.tachoFigura.classList.add('explorando');
+  await Promise.all([
+    consultarEstado(true),
+    new Promise((resolver) => window.setTimeout(resolver, 950))
+  ]);
+  elementos.heroDashboard.classList.remove('escaneando');
+  elementos.tachoFigura.removeAttribute('aria-busy');
+  escaneoEnCurso = false;
+  cambiarVista('historial');
+  elementos.panelInteractivo.classList.remove('enfocado');
+  void elementos.panelInteractivo.offsetWidth;
+  elementos.panelInteractivo.classList.add('enfocado');
+  elementos.panelInteractivo.scrollIntoView({
+    behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
+    block: 'start'
+  });
+}
+
+function cambiarEstadoElemento(elemento, clase) {
+  elemento.classList.remove('activo', 'alerta', 'advertencia');
+  if (clase) elemento.classList.add(clase);
+}
+
+function aplicarEstadoVisual(claseEstado) {
+  elementos.heroDashboard.classList.remove(...CLASES_ESTADO);
+  elementos.heroDashboard.classList.add(claseEstado);
+  elementos.estadoCapsula.classList.remove(...CLASES_ESTADO);
+  elementos.estadoCapsula.classList.add(claseEstado);
 }
 
 function actualizarConexion() {
   elementos.conexion.classList.remove('en-linea', 'sin-datos', 'consultando', 'desconectado');
+  elementos.heroDashboard.classList.remove('datos-recientes');
+  elementos.servidorPunto.classList.remove('activo', 'alerta');
 
   if (consultaEnCurso) {
     elementos.conexion.classList.add('consultando');
-    elementos.textoConexion.textContent = 'Actualizando datos';
+    elementos.textoConexion.textContent = 'Actualizando telemetría';
     elementos.detalleConexion.textContent = 'Consultando el servidor...';
+    elementos.servidorEstado.textContent = 'Sincronizando';
+    elementos.railServidorTexto.textContent = 'Sincronizando';
+    cambiarEstadoElemento(elementos.railServidor, 'advertencia');
     return;
   }
 
@@ -79,21 +542,55 @@ function actualizarConexion() {
     elementos.conexion.classList.add('desconectado');
     elementos.textoConexion.textContent = 'Sin conexión';
     elementos.detalleConexion.textContent = 'No se pudo consultar el servidor';
+    elementos.servidorEstado.textContent = 'Sin conexión';
+    elementos.servidorDetalle.textContent = 'Servidor no disponible';
+    elementos.servidorPunto.classList.add('alerta');
+    elementos.railServidorTexto.textContent = 'Sin conexión';
+    elementos.estadoOnline.textContent = 'SIN CONEXIÓN';
+    cambiarEstadoElemento(elementos.railServidor, 'alerta');
     return;
   }
+
+  elementos.servidorPunto.classList.add('activo');
+  elementos.servidorEstado.textContent = 'Servidor online';
+  elementos.servidorDetalle.textContent = '/api/estado · cada 3 s';
+  elementos.railServidorTexto.textContent = 'Online';
+  cambiarEstadoElemento(elementos.railServidor, 'activo');
 
   if (!hayMedicion) {
     elementos.conexion.classList.add('sin-datos');
-    elementos.textoConexion.textContent = 'Servidor conectado';
-    elementos.detalleConexion.textContent = 'Esperando la primera medición';
+    elementos.textoConexion.textContent = 'Esperando datos';
+    elementos.detalleConexion.textContent = 'Servidor disponible · sin mediciones';
+    elementos.estadoOnline.textContent = 'ESPERANDO DATOS';
+    datosObsoletosDetectados = false;
     return;
   }
 
-  const edadMedicion = Date.now() - fechaUltimaMedicion.getTime();
-  const datosRecientes = edadMedicion < UMBRAL_DATOS_RECIENTES;
+  const datosRecientes = Date.now() - fechaUltimaMedicion.getTime() < UMBRAL_DATOS_RECIENTES;
   elementos.conexion.classList.add(datosRecientes ? 'en-linea' : 'sin-datos');
-  elementos.textoConexion.textContent = datosRecientes ? 'Datos actualizados' : 'Servidor conectado';
-  elementos.detalleConexion.textContent = describirTiempoTranscurrido(fechaUltimaMedicion);
+  elementos.textoConexion.textContent = datosRecientes ? 'ESP32 conectado' : 'Sin datos recientes';
+  elementos.detalleConexion.textContent = datosRecientes
+    ? 'Sistema IoT conectado'
+    : describirTiempoTranscurrido(fechaUltimaMedicion);
+  elementos.estadoOnline.textContent = datosRecientes ? 'SISTEMA IoT CONECTADO' : 'SIN DATOS RECIENTES';
+  elementos.heroDashboard.classList.toggle('datos-recientes', datosRecientes);
+
+  if (!datosRecientes) {
+    if (!datosObsoletosDetectados) {
+      datosObsoletosDetectados = true;
+      registrarEvento(
+        'Sin datos recientes',
+        `Última lectura: ${describirTiempoTranscurrido(fechaUltimaMedicion).toLowerCase()}`,
+        'sistema'
+      );
+    }
+    return;
+  }
+
+  if (datosObsoletosDetectados) {
+    registrarEvento('Comunicación restablecida', 'El ESP32 volvió a enviar datos recientes', 'sistema');
+    datosObsoletosDetectados = false;
+  }
 }
 
 function actualizarTiempoRelativo() {
@@ -101,26 +598,116 @@ function actualizarTiempoRelativo() {
   actualizarConexion();
 }
 
+function escribirNivel(valor) {
+  elementos.nivel.textContent = formatearNumero(valor);
+}
+
+function animarValorNivel(nuevoNivel) {
+  window.cancelAnimationFrame(animacionNivel);
+
+  if (nuevoNivel === null) {
+    nivelMostrado = null;
+    elementos.nivel.textContent = '—';
+    elementos.unidadNivel.textContent = '';
+    return;
+  }
+
+  elementos.unidadNivel.textContent = '%';
+  const inicio = Number.isFinite(nivelMostrado) ? nivelMostrado : 0;
+  const diferencia = nuevoNivel - inicio;
+
+  if (Math.abs(diferencia) < .05 || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    escribirNivel(nuevoNivel);
+    nivelMostrado = nuevoNivel;
+    return;
+  }
+
+  const duracion = 760;
+  let tiempoInicial = null;
+
+  function avanzar(ahora) {
+    if (tiempoInicial === null) tiempoInicial = ahora;
+    const progreso = Math.max(0, Math.min(1, (ahora - tiempoInicial) / duracion));
+    const suavizado = 1 - Math.pow(1 - progreso, 3);
+    escribirNivel(inicio + diferencia * suavizado);
+
+    if (progreso < 1) {
+      animacionNivel = window.requestAnimationFrame(avanzar);
+    } else {
+      nivelMostrado = nuevoNivel;
+      escribirNivel(nuevoNivel);
+    }
+  }
+
+  animacionNivel = window.requestAnimationFrame(avanzar);
+}
+
+function confirmarActualizacionVisual() {
+  window.clearTimeout(temporizadorPulso);
+  elementos.heroDashboard.classList.remove('datos-actualizados');
+  void elementos.heroDashboard.offsetWidth;
+  elementos.heroDashboard.classList.add('datos-actualizados');
+  temporizadorPulso = window.setTimeout(() => {
+    elementos.heroDashboard.classList.remove('datos-actualizados');
+  }, 1000);
+}
+
+function actualizarAlertaOperativa({ requiereRecojo = false, id = 'TACHO-01', ubicacion = 'Entrada principal', nivel = null } = {}) {
+  elementos.centroAlertas.classList.toggle('alerta-activa', requiereRecojo);
+  elementos.centroAlertas.classList.toggle('sin-alerta', !requiereRecojo);
+  elementos.alertaOperativaDatos.hidden = !requiereRecojo;
+
+  if (requiereRecojo) {
+    elementos.tituloAcciones.textContent = 'TACHO REQUIERE RECOJO';
+    elementos.alertaOperativaChip.textContent = 'ALERTA ACTIVA';
+    elementos.alertaOperativaEstado.textContent = 'Atención operativa requerida según la última medición real.';
+    elementos.alertaOperativaId.textContent = id.toUpperCase();
+    elementos.alertaOperativaUbicacion.textContent = ubicacion;
+    elementos.alertaOperativaNivel.textContent = `${formatearNumero(nivel)}%`;
+    return;
+  }
+
+  elementos.tituloAcciones.textContent = 'Alerta operativa';
+  elementos.alertaOperativaChip.textContent = hayMedicion ? 'OPERACIÓN NORMAL' : 'SIN ALERTA ACTIVA';
+  elementos.alertaOperativaEstado.textContent = hayMedicion && Number.isFinite(nivel)
+    ? `Nivel actual: ${formatearNumero(nivel)}%. No requiere recojo.`
+    : 'Esperando una medición que requiera atención.';
+}
+
 function mostrarSinDatos() {
   hayMedicion = false;
   fechaUltimaMedicion = null;
+  nivelMostrado = null;
+  elementos.dispositivoId.textContent = '—';
   elementos.ubicacion.textContent = '—';
-  elementos.identificador.textContent = 'ID: —';
   elementos.estado.textContent = 'Sin datos';
-  elementos.nivel.textContent = '—';
-  elementos.unidadNivel.textContent = '';
+  elementos.estadoDescripcion.textContent = 'Esperando la primera medición del dispositivo';
+  animarValorNivel(null);
+  elementos.rellenoTacho.style.height = '0%';
   elementos.barraNivel.style.width = '0%';
   elementos.barraNivel.className = 'barra-nivel';
+  elementos.tachoCuerpo.setAttribute('aria-valuenow', '0');
+  elementos.tachoCuerpo.setAttribute('aria-valuetext', 'Sin datos');
   elementos.barraFondo.setAttribute('aria-valuenow', '0');
   elementos.barraFondo.setAttribute('aria-valuetext', 'Sin datos');
   elementos.distancia.textContent = '—';
+  elementos.sensorEstado.textContent = 'Esperando lectura';
+  elementos.sensorPunto.classList.remove('activo');
   elementos.tapa.textContent = '—';
-  elementos.tapaPunto.classList.remove('activo');
-  elementos.ultimaActualizacion.textContent = 'Esperando la primera medición';
+  elementos.tapaDetalle.textContent = 'Sin lectura disponible';
+  elementos.tapaPunto.classList.remove('activo', 'alerta');
+  elementos.tachoFigura.classList.remove('tapa-abierta');
+  elementos.ultimaActualizacion.textContent = '—';
   elementos.tiempoRelativo.textContent = 'Sin datos recibidos';
-  elementos.estadoTarjeta.className = 'tarjeta estado-tarjeta sin-datos';
   elementos.alertaNivel.hidden = true;
   elementos.alertaBtn.disabled = true;
+  elementos.railSensorTexto.textContent = 'En espera';
+  elementos.railTapaTexto.textContent = 'Sin datos';
+  cambiarEstadoElemento(elementos.railSensor, '');
+  cambiarEstadoElemento(elementos.railTapa, '');
+  aplicarEstadoVisual('sin-datos');
+  actualizarAlertaOperativa();
+  actualizarDiagnostico();
 }
 
 function mostrarEstado(datos) {
@@ -137,38 +724,63 @@ function mostrarEstado(datos) {
     ? datos.nivel
     : null;
   const nivel = nivelRecibido === null ? null : Math.min(100, Math.max(0, nivelRecibido));
-  const claseEstado = claseSegunEstado(datos.estado);
+  const estadoActual = estadoSegunNivel(nivel, datos.estado);
+  const claseEstado = claseSegunEstado(estadoActual);
   const ubicacion = typeof datos.ubicacion === 'string' && datos.ubicacion.trim()
     ? datos.ubicacion.trim()
     : 'Sin ubicación';
   const identificador = typeof datos.id === 'string' && datos.id.trim()
     ? datos.id.trim()
     : 'Sin identificar';
+  const tapaValida = datos.tapa === 'abierta' || datos.tapa === 'cerrada';
+  const tapaAbierta = datos.tapa === 'abierta';
 
   hayMedicion = true;
   fechaUltimaMedicion = fecha;
+  elementos.dispositivoId.textContent = identificador.toUpperCase();
   elementos.ubicacion.textContent = ubicacion;
-  elementos.identificador.textContent = `ID: ${identificador}`;
-  elementos.estado.textContent = datos.estado || 'Sin datos';
-  elementos.nivel.textContent = nivel === null ? '—' : formatearNumero(nivel);
-  elementos.unidadNivel.textContent = nivel === null ? '' : '%';
-  elementos.barraNivel.style.width = `${nivel ?? 0}%`;
+  elementos.estado.textContent = estadoActual.toUpperCase();
+  elementos.estadoDescripcion.textContent = descripcionSegunEstado(estadoActual);
+  aplicarEstadoVisual(claseEstado);
+  animarValorNivel(nivel);
+
+  const nivelSeguro = nivel ?? 0;
+  elementos.rellenoTacho.style.height = `${nivelSeguro}%`;
+  elementos.barraNivel.style.width = `${nivelSeguro}%`;
   elementos.barraNivel.className = `barra-nivel ${claseEstado}`;
-  elementos.barraFondo.setAttribute('aria-valuenow', String(nivel ?? 0));
+  elementos.tachoCuerpo.setAttribute('aria-valuenow', String(nivelSeguro));
+  elementos.tachoCuerpo.setAttribute(
+    'aria-valuetext',
+    nivel === null ? 'Sin datos' : `${formatearNumero(nivel)} por ciento`
+  );
+  elementos.barraFondo.setAttribute('aria-valuenow', String(nivelSeguro));
   elementos.barraFondo.setAttribute(
     'aria-valuetext',
     nivel === null ? 'Sin datos' : `${formatearNumero(nivel)} por ciento`
   );
+
   elementos.distancia.textContent = typeof datos.distancia === 'number' && Number.isFinite(datos.distancia)
     ? `${formatearNumero(datos.distancia)} cm`
     : '—';
+  elementos.sensorEstado.textContent = 'Sensor ultrasónico activo';
+  elementos.sensorPunto.classList.add('activo');
+  elementos.railSensorTexto.textContent = 'Activo';
+  cambiarEstadoElemento(elementos.railSensor, 'activo');
 
-  const tapaValida = datos.tapa === 'abierta' || datos.tapa === 'cerrada';
   elementos.tapa.textContent = tapaValida
     ? datos.tapa.charAt(0).toUpperCase() + datos.tapa.slice(1)
     : '—';
-  elementos.tapaPunto.classList.toggle('activo', tapaValida);
-  elementos.estadoTarjeta.className = `tarjeta estado-tarjeta ${claseEstado}`;
+  elementos.tapaDetalle.textContent = tapaValida
+    ? (tapaAbierta ? 'Apertura detectada' : 'Cierre confirmado')
+    : 'Sin lectura disponible';
+  elementos.tapaPunto.classList.toggle('activo', tapaValida && !tapaAbierta);
+  elementos.tapaPunto.classList.toggle('alerta', tapaAbierta);
+  elementos.tachoFigura.classList.toggle('tapa-abierta', tapaAbierta);
+  elementos.railTapaTexto.textContent = tapaValida
+    ? (tapaAbierta ? 'Abierta' : 'Cerrada')
+    : 'Sin datos';
+  cambiarEstadoElemento(elementos.railTapa, tapaValida ? (tapaAbierta ? 'advertencia' : 'activo') : '');
+
   elementos.ultimaActualizacion.textContent = fecha.toLocaleString('es-PE', {
     dateStyle: 'medium',
     timeStyle: 'medium',
@@ -176,14 +788,22 @@ function mostrarEstado(datos) {
   });
   elementos.tiempoRelativo.textContent = describirTiempoTranscurrido(fecha);
   elementos.alertaBtn.disabled = alertaEnCurso;
+  registrarMedicionSesion(datos, nivel, fecha, estadoActual);
 
   const requiereAlerta = nivel !== null && nivel >= 85;
   elementos.alertaNivel.hidden = !requiereAlerta;
   if (requiereAlerta) {
-    elementos.alertaDetalle.textContent = `Ubicación: ${ubicacion}. Coordinar el recojo del tacho.`;
+    elementos.alertaDetalle.textContent = `${identificador.toUpperCase()} · ${ubicacion} · coordinar recojo.`;
     elementos.alertaPorcentaje.textContent = `${formatearNumero(nivel)}%`;
   }
+  actualizarAlertaOperativa({
+    requiereRecojo: requiereAlerta,
+    id: identificador,
+    ubicacion,
+    nivel
+  });
 
+  confirmarActualizacionVisual();
   actualizarConexion();
 }
 
@@ -209,6 +829,7 @@ async function consultarEstado(mostrarConfirmacion = false) {
   if (consultaEnCurso) return;
 
   consultaEnCurso = true;
+  const inicioConsulta = performance.now();
   actualizarConexion();
 
   try {
@@ -216,16 +837,26 @@ async function consultarEstado(mostrarConfirmacion = false) {
     if (!respuesta.ok) throw new Error(`El servidor respondió con estado ${respuesta.status}`);
 
     const datos = await respuesta.json();
+    ultimaLatencia = Math.round(performance.now() - inicioConsulta);
+    ultimoEstadoHttp = `HTTP ${respuesta.status}`;
     servidorDisponible = true;
+    if (conexionInterrumpida) {
+      registrarEvento('Comunicación restablecida', 'El dashboard volvió a comunicarse con el servidor', 'sistema');
+      conexionInterrumpida = false;
+    }
     mostrarEstado(datos);
-    if (mostrarConfirmacion) mostrarMensaje('Datos actualizados correctamente.');
+    if (mostrarConfirmacion) mostrarMensaje('Telemetría actualizada correctamente.');
   } catch (error) {
+    ultimaLatencia = Math.round(performance.now() - inicioConsulta);
+    ultimoEstadoHttp = 'Error de conexión';
     servidorDisponible = false;
+    conexionInterrumpida = true;
     mostrarMensaje('No se pudo conectar con el servidor. Se conservan los últimos datos recibidos.', true);
     console.error('Error al consultar el estado:', error);
   } finally {
     consultaEnCurso = false;
     actualizarConexion();
+    actualizarDiagnostico();
   }
 }
 
@@ -274,8 +905,38 @@ async function ejecutarPrueba() {
 elementos.actualizarBtn.addEventListener('click', () => consultarEstado(true));
 elementos.probarBtn.addEventListener('click', ejecutarPrueba);
 elementos.alertaBtn.addEventListener('click', enviarAlerta);
+elementos.monitoreoBtn.addEventListener('click', alternarMonitoreo);
+elementos.tabsVista.forEach((tab) => {
+  tab.addEventListener('click', () => cambiarVista(tab.dataset.vista));
+});
+elementos.tachoFigura.addEventListener('click', explorarTelemetria);
+elementos.tachoFigura.addEventListener('keydown', (evento) => {
+  if (evento.key === 'Enter' || evento.key === ' ') {
+    evento.preventDefault();
+    explorarTelemetria();
+  }
+});
+elementos.tachoFigura.addEventListener('pointermove', (evento) => {
+  if (evento.pointerType !== 'mouse') return;
+  const limites = elementos.tachoFigura.getBoundingClientRect();
+  const proporcionX = (evento.clientX - limites.left) / limites.width - .5;
+  const proporcionY = (evento.clientY - limites.top) / limites.height - .5;
+  elementos.tachoFigura.style.setProperty('--rotar-y', `${proporcionX * 12}deg`);
+  elementos.tachoFigura.style.setProperty('--rotar-x', `${proporcionY * -8}deg`);
+});
+elementos.tachoFigura.addEventListener('pointerleave', () => {
+  elementos.tachoFigura.style.setProperty('--rotar-x', '0deg');
+  elementos.tachoFigura.style.setProperty('--rotar-y', '0deg');
+});
+elementos.tachoFigura.addEventListener('animationend', () => {
+  elementos.tachoFigura.classList.remove('explorando');
+});
 
 mostrarSinDatos();
-consultarEstado();
-window.setInterval(consultarEstado, INTERVALO_CONSULTA);
+actualizarGrafico();
+actualizarCuentaRegresiva();
+iniciarRedIoT();
+window.requestAnimationFrame(() => document.body.classList.add('interfaz-lista'));
+consultarEstado().finally(programarProximaConsulta);
 window.setInterval(actualizarTiempoRelativo, 1000);
+window.setInterval(actualizarCuentaRegresiva, 250);
