@@ -15,7 +15,7 @@ const elementos = {
   unidadNivel: document.querySelector('#unidadNivel'),
   tachoFigura: document.querySelector('#tachoFigura'),
   tachoCuerpo: document.querySelector('#tachoCuerpo'),
-  rellenoTacho: document.querySelector('#rellenoTacho'),
+  proximidadTexto: document.querySelector('#proximidadTexto'),
   barraNivel: document.querySelector('#barraNivel'),
   barraFondo: document.querySelector('#barraFondo'),
   distancia: document.querySelector('#distancia'),
@@ -82,6 +82,7 @@ const elementos = {
 
 let fechaUltimaMedicion = null;
 let hayMedicion = false;
+let hayLecturaInterior = false;
 let servidorDisponible = false;
 let consultaEnCurso = false;
 let alertaEnCurso = false;
@@ -95,6 +96,7 @@ let monitoreoPausado = false;
 let ultimaLatencia = null;
 let ultimoEstadoHttp = 'Pendiente';
 let ultimaMedicionRegistrada = null;
+let ultimaLecturaInvalidaRegistrada = null;
 let datosAnteriores = null;
 let escaneoEnCurso = false;
 let conexionInterrumpida = false;
@@ -112,26 +114,35 @@ function claseSegunEstado(estado) {
   return clases[estado] || 'sin-datos';
 }
 
-function estadoSegunNivel(nivel, estadoRecibido) {
+function estadoSegunNivel(nivel) {
   if (Number.isFinite(nivel)) {
     if (nivel >= 85) return 'Requiere recojo';
     if (nivel >= 70) return 'Casi lleno';
     return 'Disponible';
   }
-
-  return ['Disponible', 'Casi lleno', 'Requiere recojo'].includes(estadoRecibido)
-    ? estadoRecibido
-    : 'Sin datos';
+  return 'Sin datos';
 }
 
 function descripcionSegunEstado(estado) {
   const descripciones = {
-    'Disponible': 'Capacidad operativa dentro del rango normal',
-    'Casi lleno': 'El tacho se aproxima al límite de capacidad',
-    'Requiere recojo': 'Capacidad crítica: coordinar el recojo'
+    'Disponible': 'Sin proximidad crítica detectada por el sensor lateral',
+    'Casi lleno': 'Atención próxima: residuos cerca de la zona crítica',
+    'Requiere recojo': 'Zona crítica alcanzada · coordinar el recojo'
   };
+  return descripciones[estado] || 'Esperando datos del sensor';
+}
 
-  return descripciones[estado] || 'Esperando la primera medición del dispositivo';
+function distanciaInteriorValida(distancia) {
+  return typeof distancia === 'number' && Number.isFinite(distancia) && distancia > 0;
+}
+
+function proximidadSegunEstado(estado) {
+  const mensajes = {
+    'Disponible': 'Zona crítica libre',
+    'Casi lleno': 'Residuos próximos a zona crítica',
+    'Requiere recojo': 'Zona crítica alcanzada'
+  };
+  return mensajes[estado] || 'Esperando datos del sensor';
 }
 
 function formatearNumero(valor) {
@@ -273,7 +284,7 @@ function actualizarGrafico() {
   if (niveles.length === 0) {
     elementos.graficoMin.textContent = '—';
     elementos.graficoMax.textContent = '—';
-    elementos.graficoSecuencia.textContent = 'Esperando la primera lectura real.';
+    elementos.graficoSecuencia.textContent = 'Esperando datos del sensor.';
     elementos.lineaGrafico.setAttribute('points', '');
     elementos.areaGrafico.setAttribute('d', '');
     elementos.puntosGrafico.replaceChildren();
@@ -282,7 +293,7 @@ function actualizarGrafico() {
 
   elementos.graficoMin.textContent = `${formatearNumero(Math.min(...niveles))}%`;
   elementos.graficoMax.textContent = `${formatearNumero(Math.max(...niveles))}%`;
-  elementos.graficoSecuencia.textContent = `Evolución: ${niveles
+  elementos.graficoSecuencia.textContent = `Estimaciones: ${niveles
     .map((nivel) => `${formatearNumero(nivel)}%`)
     .join(' → ')}`;
 
@@ -312,7 +323,7 @@ function actualizarGrafico() {
     circulo.setAttribute('cx', punto.x.toFixed(1));
     circulo.setAttribute('cy', punto.y.toFixed(1));
     circulo.setAttribute('r', '5');
-    titulo.textContent = `${formatearNumero(punto.nivel)}% · ${punto.fecha.toLocaleTimeString('es-PE')}`;
+    titulo.textContent = `${formatearNumero(punto.nivel)}% estimado · ${punto.fecha.toLocaleTimeString('es-PE')}`;
     circulo.appendChild(titulo);
     fragmento.appendChild(circulo);
   });
@@ -361,7 +372,7 @@ function registrarMedicionSesion(datos, nivel, fecha, estadoActual) {
 
   registrarEvento(
     'Nueva medición recibida',
-    `${formatearNumero(nivel)}% de capacidad · ${formatearNumero(datos.distancia)} cm`
+    `${formatearNumero(nivel)}% estimado · ${formatearNumero(datos.distancia)} cm desde el sensor lateral`
   );
 
   if (datosAnteriores?.estado && datosAnteriores.estado !== estadoActual) {
@@ -381,17 +392,17 @@ function registrarMedicionSesion(datos, nivel, fecha, estadoActual) {
   }
 
   if (datosAnteriores && datosAnteriores.nivel < 70 && nivel >= 70) {
-    registrarEvento('Tacho alcanzó 70%', `${formatearNumero(nivel)}% · casi lleno`, 'sistema');
+    registrarEvento('Tacho alcanzó 70%', `${formatearNumero(nivel)}% estimado · atención próxima`, 'sistema');
   }
 
   if (nivel >= 85 && (!datosAnteriores || datosAnteriores.nivel < 85)) {
-    registrarEvento('Tacho requiere recojo', `${formatearNumero(nivel)}% · capacidad crítica`, 'alerta');
+    registrarEvento('Tacho requiere recojo', `${formatearNumero(nivel)}% estimado · zona crítica alcanzada`, 'alerta');
   }
 
   if (datosAnteriores && Math.abs(nivel - datosAnteriores.nivel) >= 15) {
     registrarEvento(
       'Cambio importante de nivel',
-      `${formatearNumero(datosAnteriores.nivel)}% → ${formatearNumero(nivel)}%`,
+      `${formatearNumero(datosAnteriores.nivel)}% → ${formatearNumero(nivel)}% estimado`,
       'sistema'
     );
   }
@@ -405,10 +416,10 @@ function actualizarDiagnostico() {
     : '—';
   elementos.diagnosticoHttp.textContent = ultimoEstadoHttp;
   elementos.diagnosticoMonitoreo.textContent = monitoreoPausado ? 'Pausada' : 'Automática';
-  elementos.diagnosticoMedicion.textContent = hayMedicion ? 'Recibida' : 'No recibida';
-  elementos.diagnosticoCampos.textContent = hayMedicion
-    ? 'Nivel, distancia y tapa válidos'
-    : 'Esperando dispositivo';
+  elementos.diagnosticoMedicion.textContent = hayLecturaInterior ? 'Recibida' : 'No disponible';
+  elementos.diagnosticoCampos.textContent = hayLecturaInterior
+    ? 'Lectura lateral y estimación disponibles'
+    : (hayMedicion ? 'Lectura interior no disponible' : 'Esperando datos del sensor');
 }
 
 function cambiarVista(nombreVista) {
@@ -613,6 +624,11 @@ function animarValorNivel(nuevoNivel) {
   }
 
   elementos.unidadNivel.textContent = '%';
+  if (!Number.isFinite(nivelMostrado)) {
+    nivelMostrado = nuevoNivel;
+    escribirNivel(nuevoNivel);
+    return;
+  }
   const inicio = Number.isFinite(nivelMostrado) ? nivelMostrado : 0;
   const diferencia = nuevoNivel - inicio;
 
@@ -660,7 +676,7 @@ function actualizarAlertaOperativa({ requiereRecojo = false, id = 'TACHO-01', ub
   if (requiereRecojo) {
     elementos.tituloAcciones.textContent = 'TACHO REQUIERE RECOJO';
     elementos.alertaOperativaChip.textContent = 'ALERTA ACTIVA';
-    elementos.alertaOperativaEstado.textContent = 'Atención operativa requerida según la última medición real.';
+    elementos.alertaOperativaEstado.textContent = 'Zona crítica alcanzada según la lectura del sensor lateral.';
     elementos.alertaOperativaId.textContent = id.toUpperCase();
     elementos.alertaOperativaUbicacion.textContent = ubicacion;
     elementos.alertaOperativaNivel.textContent = `${formatearNumero(nivel)}%`;
@@ -668,30 +684,34 @@ function actualizarAlertaOperativa({ requiereRecojo = false, id = 'TACHO-01', ub
   }
 
   elementos.tituloAcciones.textContent = 'Alerta operativa';
-  elementos.alertaOperativaChip.textContent = hayMedicion ? 'OPERACIÓN NORMAL' : 'SIN ALERTA ACTIVA';
+  elementos.alertaOperativaChip.textContent = !hayLecturaInterior
+    ? (hayMedicion ? 'SIN LECTURA INTERIOR' : 'SIN ALERTA ACTIVA')
+    : (nivel >= 70 ? 'ATENCIÓN PRÓXIMA' : 'OPERACIÓN NORMAL');
   elementos.alertaOperativaEstado.textContent = hayMedicion && Number.isFinite(nivel)
-    ? `Nivel actual: ${formatearNumero(nivel)}%. No requiere recojo.`
-    : 'Esperando una medición que requiera atención.';
+    ? `Nivel estimado: ${formatearNumero(nivel)}%. Sin alerta de recojo.`
+    : (hayMedicion ? 'Lectura interior no disponible.' : 'Esperando datos del sensor.');
 }
 
 function mostrarSinDatos() {
   hayMedicion = false;
+  hayLecturaInterior = false;
   fechaUltimaMedicion = null;
   nivelMostrado = null;
   elementos.dispositivoId.textContent = '—';
   elementos.ubicacion.textContent = '—';
-  elementos.estado.textContent = 'Sin datos';
-  elementos.estadoDescripcion.textContent = 'Esperando la primera medición del dispositivo';
+  elementos.estado.textContent = 'Esperando datos';
+  elementos.estadoDescripcion.textContent = 'Esperando datos del sensor';
+  elementos.proximidadTexto.textContent = 'Esperando datos del sensor';
   animarValorNivel(null);
-  elementos.rellenoTacho.style.height = '0%';
   elementos.barraNivel.style.width = '0%';
   elementos.barraNivel.className = 'barra-nivel';
-  elementos.tachoCuerpo.setAttribute('aria-valuenow', '0');
-  elementos.tachoCuerpo.setAttribute('aria-valuetext', 'Sin datos');
-  elementos.barraFondo.setAttribute('aria-valuenow', '0');
-  elementos.barraFondo.setAttribute('aria-valuetext', 'Sin datos');
+  elementos.tachoCuerpo.removeAttribute('aria-valuenow');
+  elementos.tachoCuerpo.setAttribute('aria-valuetext', 'Esperando datos del sensor');
+  elementos.barraFondo.removeAttribute('aria-valuenow');
+  elementos.barraFondo.setAttribute('aria-valuetext', 'Esperando datos del sensor');
   elementos.distancia.textContent = '—';
-  elementos.sensorEstado.textContent = 'Esperando lectura';
+  elementos.distancia.classList.remove('sin-lectura');
+  elementos.sensorEstado.textContent = 'Sensor lateral AJ-SR04M · en espera';
   elementos.sensorPunto.classList.remove('activo');
   elementos.tapa.textContent = '—';
   elementos.tapaDetalle.textContent = 'Sin lectura disponible';
@@ -720,11 +740,13 @@ function mostrarEstado(datos) {
     return;
   }
 
-  const nivelRecibido = typeof datos.nivel === 'number' && Number.isFinite(datos.nivel)
+  const lecturaValida = distanciaInteriorValida(datos.distancia);
+  const nivelRecibido = lecturaValida && typeof datos.nivel === 'number' && Number.isFinite(datos.nivel)
+    && datos.nivel >= 0 && datos.nivel <= 100
     ? datos.nivel
     : null;
-  const nivel = nivelRecibido === null ? null : Math.min(100, Math.max(0, nivelRecibido));
-  const estadoActual = estadoSegunNivel(nivel, datos.estado);
+  const nivel = nivelRecibido;
+  const estadoActual = estadoSegunNivel(nivel);
   const claseEstado = claseSegunEstado(estadoActual);
   const ubicacion = typeof datos.ubicacion === 'string' && datos.ubicacion.trim()
     ? datos.ubicacion.trim()
@@ -736,36 +758,48 @@ function mostrarEstado(datos) {
   const tapaAbierta = datos.tapa === 'abierta';
 
   hayMedicion = true;
+  hayLecturaInterior = nivel !== null;
   fechaUltimaMedicion = fecha;
   elementos.dispositivoId.textContent = identificador.toUpperCase();
   elementos.ubicacion.textContent = ubicacion;
-  elementos.estado.textContent = estadoActual.toUpperCase();
-  elementos.estadoDescripcion.textContent = descripcionSegunEstado(estadoActual);
+  elementos.estado.textContent = hayLecturaInterior ? estadoActual.toUpperCase() : 'SIN LECTURA INTERIOR';
+  elementos.estadoDescripcion.textContent = hayLecturaInterior
+    ? descripcionSegunEstado(estadoActual)
+    : 'Lectura interior no disponible · estimación suspendida';
+  elementos.proximidadTexto.textContent = hayLecturaInterior
+    ? proximidadSegunEstado(estadoActual)
+    : 'Lectura interior no disponible';
   aplicarEstadoVisual(claseEstado);
   animarValorNivel(nivel);
 
-  const nivelSeguro = nivel ?? 0;
-  elementos.rellenoTacho.style.height = `${nivelSeguro}%`;
-  elementos.barraNivel.style.width = `${nivelSeguro}%`;
+  elementos.barraNivel.style.width = `${nivel ?? 0}%`;
   elementos.barraNivel.className = `barra-nivel ${claseEstado}`;
-  elementos.tachoCuerpo.setAttribute('aria-valuenow', String(nivelSeguro));
+  if (hayLecturaInterior) {
+    elementos.tachoCuerpo.setAttribute('aria-valuenow', String(nivel));
+    elementos.barraFondo.setAttribute('aria-valuenow', String(nivel));
+  } else {
+    elementos.tachoCuerpo.removeAttribute('aria-valuenow');
+    elementos.barraFondo.removeAttribute('aria-valuenow');
+  }
   elementos.tachoCuerpo.setAttribute(
     'aria-valuetext',
-    nivel === null ? 'Sin datos' : `${formatearNumero(nivel)} por ciento`
+    nivel === null ? 'Lectura interior no disponible' : `${formatearNumero(nivel)} por ciento estimado; ${estadoActual}`
   );
-  elementos.barraFondo.setAttribute('aria-valuenow', String(nivelSeguro));
   elementos.barraFondo.setAttribute(
     'aria-valuetext',
-    nivel === null ? 'Sin datos' : `${formatearNumero(nivel)} por ciento`
+    nivel === null ? 'Lectura interior no disponible' : `${formatearNumero(nivel)} por ciento estimado; ${estadoActual}`
   );
 
-  elementos.distancia.textContent = typeof datos.distancia === 'number' && Number.isFinite(datos.distancia)
-    ? `${formatearNumero(datos.distancia)} cm`
-    : '—';
-  elementos.sensorEstado.textContent = 'Sensor ultrasónico activo';
-  elementos.sensorPunto.classList.add('activo');
-  elementos.railSensorTexto.textContent = 'Activo';
-  cambiarEstadoElemento(elementos.railSensor, 'activo');
+  elementos.distancia.textContent = lecturaValida
+    ? `${datos.distancia.toLocaleString('es-PE', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} cm`
+    : 'Lectura interior no disponible';
+  elementos.distancia.classList.toggle('sin-lectura', !lecturaValida);
+  elementos.sensorEstado.textContent = lecturaValida
+    ? 'Sensor lateral AJ-SR04M'
+    : 'Sensor lateral AJ-SR04M · sin lectura';
+  elementos.sensorPunto.classList.toggle('activo', lecturaValida);
+  elementos.railSensorTexto.textContent = lecturaValida ? 'Activo' : 'Sin lectura';
+  cambiarEstadoElemento(elementos.railSensor, lecturaValida ? 'activo' : 'advertencia');
 
   elementos.tapa.textContent = tapaValida
     ? datos.tapa.charAt(0).toUpperCase() + datos.tapa.slice(1)
@@ -787,14 +821,18 @@ function mostrarEstado(datos) {
     timeZone: 'America/Lima'
   });
   elementos.tiempoRelativo.textContent = describirTiempoTranscurrido(fecha);
-  elementos.alertaBtn.disabled = alertaEnCurso;
+  elementos.alertaBtn.disabled = alertaEnCurso || !hayLecturaInterior;
+  if (!hayLecturaInterior && fecha.toISOString() !== ultimaLecturaInvalidaRegistrada) {
+    ultimaLecturaInvalidaRegistrada = fecha.toISOString();
+    registrarEvento('Lectura interior no disponible', 'No se muestra una estimación sin distancia lateral válida', 'sistema');
+  }
   registrarMedicionSesion(datos, nivel, fecha, estadoActual);
 
   const requiereAlerta = nivel !== null && nivel >= 85;
   elementos.alertaNivel.hidden = !requiereAlerta;
   if (requiereAlerta) {
-    elementos.alertaDetalle.textContent = `${identificador.toUpperCase()} · ${ubicacion} · coordinar recojo.`;
-    elementos.alertaPorcentaje.textContent = `${formatearNumero(nivel)}%`;
+    elementos.alertaDetalle.textContent = `Residuos detectados en la zona crítica · ${identificador.toUpperCase()} · ${ubicacion}.`;
+    elementos.alertaPorcentaje.textContent = `${formatearNumero(nivel)}% est.`;
   }
   actualizarAlertaOperativa({
     requiereRecojo: requiereAlerta,
@@ -878,7 +916,7 @@ async function enviarAlerta() {
     console.error('Error al registrar la alerta:', error);
   } finally {
     alertaEnCurso = false;
-    elementos.alertaBtn.disabled = !hayMedicion;
+    elementos.alertaBtn.disabled = !hayLecturaInterior;
   }
 }
 

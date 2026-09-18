@@ -118,9 +118,9 @@
         <svg><use href="#icon-alerta"></use></svg>
       </div>
       <div class="alerta-contenido">
-        <p class="alerta-etiqueta">ALERTA CRÍTICA DE CAPACIDAD</p>
+        <p class="alerta-etiqueta">ZONA CRÍTICA ALCANZADA</p>
         <h2>TACHO REQUIERE RECOJO</h2>
-        <p id="alertaDetalle">Nivel crítico detectado.</p>
+        <p id="alertaDetalle">Residuos detectados en la zona crítica.</p>
       </div>
       <span id="alertaPorcentaje" class="alerta-porcentaje">—</span>
     </section>
@@ -160,9 +160,9 @@
               <span id="sensorPunto" class="actividad-punto"></span>
             </div>
             <div>
-              <p class="rotulo-claro">DISTANCIA MEDIDA</p>
+              <p class="rotulo-claro">DISTANCIA INTERIOR</p>
               <p id="distancia" class="metrica-valor">—</p>
-              <p id="sensorEstado" class="metrica-detalle">Esperando lectura</p>
+              <p id="sensorEstado" class="metrica-detalle">Sensor lateral AJ-SR04M</p>
             </div>
           </article>
 
@@ -193,27 +193,29 @@
             <div class="ondas-senal" aria-hidden="true">
               <span></span><span></span><span></span>
             </div>
-            <div class="barrido-sensor" aria-hidden="true"></div>
-
             <div id="tachoFigura" class="tacho-figura" role="button" tabindex="0" aria-label="Abrir historial y diagnóstico del tacho" aria-controls="panelInteractivo">
               <div class="tacho-tapa">
                 <span class="tacho-asa"></span>
                 <span class="tapa-superior"></span>
               </div>
-              <div id="tachoCuerpo" class="tacho-cuerpo" role="progressbar" aria-label="Nivel de llenado del tacho" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-valuetext="Sin datos">
-                <div id="rellenoTacho" class="relleno-tacho">
-                  <span class="onda-relleno"></span>
-                  <span class="particula-residuo p1"></span>
-                  <span class="particula-residuo p2"></span>
-                  <span class="particula-residuo p3"></span>
-                  <span class="particula-residuo p4"></span>
-                  <span class="particula-residuo p5"></span>
-                  <span class="particula-residuo p6"></span>
+              <span class="sensor-lateral" aria-hidden="true"></span>
+              <div id="tachoCuerpo" class="tacho-cuerpo" role="meter" aria-label="Nivel estimado y proximidad a la zona crítica" aria-valuemin="0" aria-valuemax="100" aria-valuetext="Esperando datos del sensor">
+                <div class="zona-critica-visual" aria-hidden="true">
+                  <span>ZONA CRÍTICA</span>
+                  <i class="haz-sensor"></i>
+                  <i class="objetivo-sensor"></i>
+                </div>
+                <div class="residuos-proximidad" aria-hidden="true">
+                  <span class="residuo residuo-uno"></span>
+                  <span class="residuo residuo-dos"></span>
+                  <span class="residuo residuo-tres"></span>
+                  <span class="residuo residuo-cuatro"></span>
                 </div>
                 <div class="brillo-tacho" aria-hidden="true"></div>
                 <div class="nivel-central">
+                  <em>NIVEL ESTIMADO</em>
                   <span id="nivel">—</span><small id="unidadNivel"></small>
-                  <em>NIVEL ACTUAL</em>
+                  <span id="proximidadTexto" class="proximidad-texto">Esperando datos del sensor</span>
                 </div>
                 <span class="linea-tacho linea-uno" aria-hidden="true"></span>
                 <span class="linea-tacho linea-dos" aria-hidden="true"></span>
@@ -228,9 +230,9 @@
 
           <div id="estadoCapsula" class="estado-capsula sin-datos">
             <span class="estado-luz" aria-hidden="true"></span>
-            <span id="estado">Sin datos</span>
+            <span id="estado">Esperando datos</span>
           </div>
-          <p id="estadoDescripcion" class="estado-descripcion">Esperando la primera medición del dispositivo</p>
+          <p id="estadoDescripcion" class="estado-descripcion">Esperando datos del sensor</p>
         </div>
 
         <div class="columna-telemetria derecha">
@@ -262,17 +264,18 @@
 
       <div class="nivel-lineal">
         <div class="nivel-lineal-cabecera">
-          <span>CAPACIDAD</span>
-          <span><b>70%</b> aviso <b>85%</b> crítico</span>
+          <span>INDICADOR ESTIMADO · POR ZONAS</span>
+          <span><b>70%</b> atención <b>85%</b> zona crítica</span>
         </div>
-        <div id="barraFondo" class="barra-fondo" role="progressbar" aria-label="Nivel de llenado" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-valuetext="Sin datos">
+        <div id="barraFondo" class="barra-fondo" role="progressbar" aria-label="Nivel estimado" aria-valuemin="0" aria-valuemax="100" aria-valuetext="Esperando datos del sensor">
           <div id="barraNivel" class="barra-nivel"></div>
           <span class="marca-umbral marca-setenta" aria-hidden="true"></span>
           <span class="marca-umbral marca-ochenta-cinco" aria-hidden="true"></span>
         </div>
         <div class="escala-nivel" aria-hidden="true">
-          <span>VACÍO</span><span>LLENO</span>
+          <span>DISPONIBLE</span><span>ZONA CRÍTICA</span>
         </div>
+        <p class="nota-estimacion">El nivel mostrado es una estimación basada en la proximidad de residuos al sensor interior lateral. El haz señala su zona de detección horizontal, no el volumen exacto de residuos.</p>
       </div>
 
       <footer class="estado-sistema">
@@ -316,8 +319,8 @@
         <article class="grafico-tarjeta">
           <div class="grafico-cabecera">
             <div>
-              <p class="rotulo-panel">NIVEL DE LLENADO</p>
-              <h3>Evolución en tiempo real</h3>
+              <p class="rotulo-panel">NIVEL ESTIMADO</p>
+              <h3>Evolución de la estimación</h3>
             </div>
             <div class="resumen-grafico">
               <span><small>MÍN.</small><strong id="graficoMin">—</strong></span>
@@ -326,7 +329,7 @@
             </div>
           </div>
           <div class="grafico-contenedor">
-            <svg id="graficoNivel" class="grafico-nivel" viewBox="0 0 600 220" preserveAspectRatio="none" role="img" aria-label="Historial del nivel durante esta sesión">
+            <svg id="graficoNivel" class="grafico-nivel" viewBox="0 0 600 220" preserveAspectRatio="none" role="img" aria-label="Historial del nivel estimado durante esta sesión">
               <defs>
                 <linearGradient id="gradienteGrafico" x1="0" x2="0" y1="0" y2="1">
                   <stop offset="0%" stop-color="#20c989" stop-opacity=".34"/>
@@ -354,11 +357,11 @@
             </div>
           </div>
           <div class="leyenda-grafico">
-            <span><i class="leyenda-linea"></i>Nivel recibido</span>
+            <span><i class="leyenda-linea"></i>Nivel estimado</span>
             <span><i class="leyenda-aviso"></i>70% Casi lleno</span>
             <span><i class="leyenda-critico"></i>85% Recojo</span>
           </div>
-          <p id="graficoSecuencia" class="grafico-secuencia" aria-live="polite">Esperando la primera lectura real.</p>
+          <p id="graficoSecuencia" class="grafico-secuencia" aria-live="polite">Esperando datos del sensor.</p>
         </article>
 
         <aside class="actividad-tarjeta">
@@ -426,7 +429,7 @@
           <dl id="alertaOperativaDatos" class="alerta-operativa-datos" hidden>
             <div><dt>Tacho</dt><dd id="alertaOperativaId">TACHO-01</dd></div>
             <div><dt>Ubicación</dt><dd id="alertaOperativaUbicacion">Entrada principal</dd></div>
-            <div><dt>Nivel</dt><dd id="alertaOperativaNivel">—</dd></div>
+            <div><dt>Nivel estimado</dt><dd id="alertaOperativaNivel">—</dd></div>
           </dl>
           <small class="canal-alerta">Registro interno disponible · Telegram no configurado</small>
         </div>

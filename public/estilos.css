@@ -346,6 +346,11 @@ h1 span {
   letter-spacing: -.025em;
 }
 
+.alerta-contenido {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
 .alerta-contenido p:last-child {
   margin: 4px 0 0;
   color: #98585c;
@@ -691,6 +696,13 @@ h1 span {
   letter-spacing: -.015em;
 }
 
+.metrica-valor.sin-lectura {
+  color: #d3a96d;
+  font-size: .84rem;
+  line-height: 1.35;
+  white-space: normal;
+}
+
 .metrica-valor.fecha {
   font-size: .86rem;
   line-height: 1.35;
@@ -799,46 +811,6 @@ h1 span {
 .dashboard-principal.requiere-recojo .orbita::before,
 .dashboard-principal.requiere-recojo .nodo-iot { background: var(--rojo); box-shadow: 0 0 14px var(--rojo); }
 
-.barrido-sensor {
-  position: absolute;
-  z-index: 1;
-  top: 20px;
-  bottom: 18px;
-  left: 50%;
-  width: 290px;
-  overflow: hidden;
-  border-radius: 50%;
-  opacity: 0;
-  transform: translateX(-50%);
-  pointer-events: none;
-}
-
-.barrido-sensor::after {
-  position: absolute;
-  right: 0;
-  left: 0;
-  height: 2px;
-  background: linear-gradient(90deg, transparent, var(--verde), transparent);
-  box-shadow: 0 0 18px var(--verde), 0 10px 28px rgba(46, 230, 157, .18);
-  content: "";
-}
-
-.dashboard-principal.datos-recientes .barrido-sensor {
-  opacity: .55;
-}
-
-.dashboard-principal.datos-recientes .barrido-sensor::after {
-  animation: barridoContinuo 4.6s ease-in-out infinite;
-}
-
-.dashboard-principal.escaneando .barrido-sensor {
-  opacity: 1;
-}
-
-.dashboard-principal.escaneando .barrido-sensor::after {
-  animation: escaneoManual .9s ease-in-out 2;
-}
-
 .ondas-senal {
   position: absolute;
   top: 47%;
@@ -914,6 +886,39 @@ h1 span {
   transform-origin: 88% 75%;
 }
 
+.sensor-lateral {
+  --color-sensor: #2ee69d;
+  position: absolute;
+  z-index: 5;
+  top: 98px;
+  left: 4px;
+  width: 15px;
+  height: 23px;
+  background: var(--color-sensor);
+  border: 2px solid #092e22;
+  border-radius: 5px 2px 2px 5px;
+  box-shadow: 0 0 0 3px rgba(46, 230, 157, .11), 0 0 13px var(--color-sensor);
+  transition: background .35s, box-shadow .35s;
+}
+
+.sensor-lateral::after {
+  position: absolute;
+  top: 8px;
+  left: 12px;
+  width: 142px;
+  border-top: 1px dashed var(--color-sensor);
+  content: "";
+  opacity: .55;
+}
+
+.dashboard-principal.casi-lleno .sensor-lateral { --color-sensor: var(--ambar); }
+.dashboard-principal.requiere-recojo .sensor-lateral { --color-sensor: var(--rojo); }
+
+.dashboard-principal.sin-datos .sensor-lateral {
+  filter: grayscale(1);
+  opacity: .42;
+}
+
 .tacho-figura.tapa-abierta .tacho-tapa {
   transform: translate(4px, -11px) rotate(15deg);
 }
@@ -957,76 +962,112 @@ h1 span {
   box-shadow: inset 13px 0 22px rgba(255, 255, 255, .035), inset -12px 0 22px rgba(0, 0, 0, .2);
 }
 
-.relleno-tacho {
-  position: absolute;
-  z-index: 0;
-  right: 0;
-  bottom: 0;
-  left: 0;
-  height: 0;
-  overflow: visible;
-  background: linear-gradient(180deg, #2ee69d, #0b8b60);
-  opacity: .86;
-  transition: height .9s cubic-bezier(.22, .75, .25, 1), background .4s;
-}
-
-.relleno-tacho::after {
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(90deg, rgba(255, 255, 255, .13), transparent 35%, rgba(0, 0, 0, .1));
-  content: "";
-}
-
-.particula-residuo {
+.zona-critica-visual {
+  --color-zona: #2ee69d;
   position: absolute;
   z-index: 1;
-  width: 9px;
-  height: 9px;
-  background: rgba(255, 255, 255, .25);
-  border: 1px solid rgba(255, 255, 255, .24);
-  border-radius: 3px;
-  animation: flotarResiduo 4.5s ease-in-out infinite;
+  top: 34px;
+  right: 11px;
+  left: 11px;
+  height: 48px;
+  background: rgba(46, 230, 157, .035);
+  border: 1px dashed rgba(46, 230, 157, .36);
+  border-radius: 8px;
+  transition: background .35s, border-color .35s, box-shadow .35s;
 }
 
-.particula-residuo.p1 { left: 18%; bottom: 14%; transform: rotate(18deg); }
-.particula-residuo.p2 { left: 42%; bottom: 28%; width: 13px; height: 7px; animation-delay: -.8s; }
-.particula-residuo.p3 { right: 19%; bottom: 18%; border-radius: 50%; animation-delay: -1.7s; }
-.particula-residuo.p4 { left: 27%; bottom: 48%; width: 7px; height: 12px; animation-delay: -2.4s; }
-.particula-residuo.p5 { right: 28%; bottom: 59%; width: 11px; height: 8px; animation-delay: -3.2s; }
-.particula-residuo.p6 { left: 51%; bottom: 73%; border-radius: 50%; animation-delay: -1.1s; }
+.zona-critica-visual > span {
+  position: absolute;
+  top: 5px;
+  right: 8px;
+  color: var(--color-zona);
+  font-size: .37rem;
+  font-weight: 850;
+  letter-spacing: .13em;
+}
+
+.haz-sensor {
+  position: absolute;
+  top: 29px;
+  right: 17px;
+  left: 0;
+  height: 1px;
+  background: linear-gradient(90deg, var(--color-zona), transparent);
+  opacity: .38;
+}
+
+.objetivo-sensor {
+  position: absolute;
+  top: 23px;
+  right: 15px;
+  width: 11px;
+  height: 11px;
+  border: 2px solid var(--color-zona);
+  border-radius: 50%;
+  opacity: .5;
+}
+
+.dashboard-principal.casi-lleno .zona-critica-visual {
+  --color-zona: var(--ambar);
+  background: rgba(242, 184, 75, .055);
+  border-color: rgba(242, 184, 75, .5);
+}
+
+.dashboard-principal.requiere-recojo .zona-critica-visual {
+  --color-zona: var(--rojo);
+  background: rgba(255, 92, 98, .12);
+  border-color: rgba(255, 92, 98, .7);
+  box-shadow: inset 0 0 18px rgba(255, 92, 98, .09), 0 0 16px rgba(255, 92, 98, .08);
+}
+
+.dashboard-principal.requiere-recojo .objetivo-sensor {
+  background: var(--rojo);
+  opacity: 1;
+  box-shadow: 0 0 10px var(--rojo);
+}
+
+.dashboard-principal.datos-recientes .haz-sensor {
+  animation: pulsoHazLateral 4.5s ease-in-out infinite;
+}
+
+.dashboard-principal.escaneando .haz-sensor {
+  animation: pulsoHazLateral .8s ease-in-out 2;
+}
+
+.dashboard-principal.sin-datos .zona-critica-visual { opacity: .28; filter: grayscale(1); }
+
+.residuos-proximidad {
+  position: absolute;
+  z-index: 2;
+  inset: 0;
+  pointer-events: none;
+}
+
+.residuo {
+  position: absolute;
+  width: 18px;
+  height: 13px;
+  background: #617a6e;
+  border: 1px solid rgba(191, 222, 207, .35);
+  border-radius: 5px 7px 4px 6px;
+  box-shadow: 0 5px 9px rgba(0, 0, 0, .22);
+  transform: rotate(-13deg);
+  transition: top .75s cubic-bezier(.2, .75, .2, 1), left .75s cubic-bezier(.2, .75, .2, 1), background .4s, opacity .35s;
+}
+
+.residuo-uno { top: 169px; left: 39px; }
+.residuo-dos { top: 176px; left: 102px; width: 24px; transform: rotate(14deg); }
+.residuo-tres { top: 157px; left: 122px; width: 15px; height: 17px; }
+.residuo-cuatro { top: 162px; left: 72px; width: 12px; height: 11px; transform: rotate(22deg); }
+
+.dashboard-principal.casi-lleno .residuo-tres { top: 99px; left: 119px; background: #ae8238; }
+.dashboard-principal.casi-lleno .residuo-cuatro { top: 111px; left: 84px; background: #ae8238; }
+.dashboard-principal.requiere-recojo .residuo-tres { top: 52px; left: 119px; background: #cc565a; }
+.dashboard-principal.requiere-recojo .residuo-cuatro { top: 64px; left: 83px; background: #cc565a; }
+.dashboard-principal.sin-datos .residuos-proximidad { opacity: 0; }
 
 .dashboard-principal.requiere-recojo .tacho-cuerpo {
   animation: alertaTacho 1.8s ease-in-out infinite;
-}
-
-.onda-relleno {
-  position: absolute;
-  top: -9px;
-  left: -25%;
-  width: 150%;
-  height: 18px;
-  background: currentColor;
-  border-radius: 50%;
-  color: #4af0ad;
-  animation: oleaje 3.2s ease-in-out infinite alternate;
-  opacity: .95;
-}
-
-.dashboard-principal.casi-lleno .relleno-tacho {
-  background: linear-gradient(180deg, #f4c65f, #c98214);
-}
-
-.dashboard-principal.casi-lleno .onda-relleno {
-  color: #f7cf72;
-}
-
-.dashboard-principal.requiere-recojo .relleno-tacho {
-  background: linear-gradient(180deg, #ff7075, #bd3038);
-}
-
-.dashboard-principal.requiere-recojo .onda-relleno {
-  color: #ff8388;
-  animation-duration: 1.6s;
 }
 
 .brillo-tacho {
@@ -1044,16 +1085,17 @@ h1 span {
 .nivel-central {
   position: absolute;
   z-index: 3;
-  top: 50%;
+  top: 55%;
   left: 50%;
-  width: 100%;
+  width: 90%;
   color: white;
   text-shadow: 0 2px 10px rgba(0, 0, 0, .32);
-  transform: translate(-50%, -48%);
+  text-align: center;
+  transform: translate(-50%, -38%);
 }
 
-.nivel-central > span {
-  font-size: 3.45rem;
+.nivel-central #nivel {
+  font-size: 3.05rem;
   font-weight: 850;
   line-height: 1;
   letter-spacing: -.07em;
@@ -1061,19 +1103,34 @@ h1 span {
 
 .nivel-central small {
   margin-left: 3px;
-  font-size: 1.3rem;
+  font-size: 1.1rem;
   font-weight: 800;
 }
 
 .nivel-central em {
   display: block;
-  margin-top: 5px;
-  font-size: .53rem;
+  margin-bottom: 7px;
+  font-size: .56rem;
   font-style: normal;
   font-weight: 850;
   letter-spacing: .18em;
   opacity: .72;
 }
+
+.nivel-central .proximidad-texto {
+  display: block;
+  max-width: 140px;
+  margin: 7px auto 0;
+  color: var(--verde);
+  font-size: .53rem;
+  font-weight: 850;
+  line-height: 1.22;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, .6);
+}
+
+.dashboard-principal.casi-lleno .proximidad-texto { color: var(--ambar); }
+.dashboard-principal.requiere-recojo .proximidad-texto { color: #ff9a9d; }
+.dashboard-principal.sin-datos .proximidad-texto { color: #a7bbb2; }
 
 .linea-tacho {
   position: absolute;
@@ -1169,13 +1226,22 @@ h1 span {
 .estado-descripcion {
   margin: 8px 0 0;
   color: rgba(207, 229, 221, .48);
-  font-size: .66rem;
+  font-size: .72rem;
 }
 
 .nivel-lineal {
   position: relative;
   z-index: 1;
   padding: 0 4px 20px;
+}
+
+.nota-estimacion {
+  max-width: 750px;
+  margin: 11px auto 0;
+  color: rgba(205, 230, 220, .57);
+  font-size: .61rem;
+  line-height: 1.5;
+  text-align: center;
 }
 
 .nivel-lineal-cabecera,
@@ -2346,10 +2412,6 @@ body::after {
   border-bottom-color: rgba(255, 92, 98, .18);
 }
 
-.nivel-central > span {
-  font-size: 3.7rem;
-}
-
 .estado-capsula {
   box-shadow: inset 0 1px rgba(255, 255, 255, .04), 0 9px 22px rgba(0, 0, 0, .15);
 }
@@ -2469,13 +2531,8 @@ body.interfaz-lista .panel-inferior {
   65%, 100% { opacity: 0; transform: translate(-50%, -50%) scale(1.08); }
 }
 
-@keyframes oleaje {
-  from { transform: translateX(-3%) rotate(-1deg); }
-  to { transform: translateX(3%) rotate(1deg); }
-}
-
 @keyframes confirmarDato {
-  50% { transform: translate(-50%, -48%) scale(1.045); filter: brightness(1.2); }
+  50% { transform: translate(-50%, -38%) scale(1.035); filter: brightness(1.12); }
 }
 
 @keyframes explorarTacho {
@@ -2524,23 +2581,9 @@ body.interfaz-lista .panel-inferior {
   50% { opacity: .45; transform: scale(.72); }
 }
 
-@keyframes barridoContinuo {
-  0%, 12% { top: 2%; opacity: 0; }
-  24% { opacity: .9; }
-  68% { opacity: .75; }
-  82%, 100% { top: 96%; opacity: 0; }
-}
-
-@keyframes escaneoManual {
-  0% { top: 0; opacity: 0; }
-  18% { opacity: 1; }
-  82% { opacity: 1; }
-  100% { top: 98%; opacity: 0; }
-}
-
-@keyframes flotarResiduo {
-  0%, 100% { translate: 0 0; rotate: 0deg; }
-  50% { translate: 4px -8px; rotate: 13deg; }
+@keyframes pulsoHazLateral {
+  0%, 100% { opacity: .3; }
+  50% { opacity: .72; }
 }
 
 @keyframes alertaTacho {
@@ -2732,7 +2775,7 @@ body.interfaz-lista .panel-inferior {
   }
 
   .alerta-nivel {
-    grid-template-columns: auto 1fr;
+    grid-template-columns: auto minmax(0, 1fr);
     padding: 16px;
   }
 
