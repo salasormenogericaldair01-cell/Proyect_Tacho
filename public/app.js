@@ -46,10 +46,6 @@ const elementos = {
   alertaNivel: document.querySelector('#alertaNivel'),
   alertaDetalle: document.querySelector('#alertaDetalle'),
   alertaPorcentaje: document.querySelector('#alertaPorcentaje'),
-  mensaje: document.querySelector('#mensaje'),
-  actualizarBtn: document.querySelector('#actualizarBtn'),
-  probarBtn: document.querySelector('#probarBtn'),
-  alertaBtn: document.querySelector('#alertaBtn'),
   panelInteractivo: document.querySelector('#panelInteractivo'),
   tabsVista: document.querySelectorAll('.tab-vista'),
   vistasInteractivas: document.querySelectorAll('.vista-interactiva'),
@@ -77,7 +73,8 @@ const elementos = {
   alertaOperativaDatos: document.querySelector('#alertaOperativaDatos'),
   alertaOperativaId: document.querySelector('#alertaOperativaId'),
   alertaOperativaUbicacion: document.querySelector('#alertaOperativaUbicacion'),
-  alertaOperativaNivel: document.querySelector('#alertaOperativaNivel')
+  alertaOperativaNivel: document.querySelector('#alertaOperativaNivel'),
+  canalAlerta: document.querySelector('#canalAlerta')
 };
 
 let fechaUltimaMedicion = null;
@@ -85,10 +82,8 @@ let hayMedicion = false;
 let hayLecturaInterior = false;
 let servidorDisponible = false;
 let consultaEnCurso = false;
-let alertaEnCurso = false;
 let nivelMostrado = null;
 let animacionNivel = null;
-let temporizadorMensaje = null;
 let temporizadorPulso = null;
 let temporizadorConsulta = null;
 let proximaConsultaEn = null;
@@ -506,7 +501,7 @@ async function explorarTelemetria() {
   void elementos.tachoFigura.offsetWidth;
   elementos.tachoFigura.classList.add('explorando');
   await Promise.all([
-    consultarEstado(true),
+    consultarEstado(),
     new Promise((resolver) => window.setTimeout(resolver, 950))
   ]);
   elementos.heroDashboard.classList.remove('escaneando');
@@ -668,28 +663,47 @@ function confirmarActualizacionVisual() {
   }, 1000);
 }
 
-function actualizarAlertaOperativa({ requiereRecojo = false, id = 'TACHO-01', ubicacion = 'Entrada principal', nivel = null } = {}) {
+function actualizarAlertaOperativa({ id = 'TACHO-01', ubicacion = 'Entrada principal', nivel = null } = {}) {
+  const lecturaValida = hayLecturaInterior && Number.isFinite(nivel);
+  const requiereRecojo = lecturaValida && nivel >= 85;
+  const atencionProxima = lecturaValida && nivel >= 70 && nivel < 85;
+
   elementos.centroAlertas.classList.toggle('alerta-activa', requiereRecojo);
-  elementos.centroAlertas.classList.toggle('sin-alerta', !requiereRecojo);
+  elementos.centroAlertas.classList.toggle('atencion-proxima', atencionProxima);
+  elementos.centroAlertas.classList.toggle('sin-alerta', lecturaValida && !requiereRecojo && !atencionProxima);
+  elementos.centroAlertas.classList.toggle('sin-datos', !lecturaValida);
   elementos.alertaOperativaDatos.hidden = !requiereRecojo;
+  elementos.tituloAcciones.textContent = 'Alerta operativa';
+
+  if (!lecturaValida) {
+    elementos.alertaOperativaChip.textContent = 'ESPERANDO DATOS';
+    elementos.alertaOperativaEstado.textContent = 'Esperando una medición válida del sensor interior.';
+    elementos.canalAlerta.hidden = true;
+    return;
+  }
 
   if (requiereRecojo) {
-    elementos.tituloAcciones.textContent = 'TACHO REQUIERE RECOJO';
-    elementos.alertaOperativaChip.textContent = 'ALERTA ACTIVA';
-    elementos.alertaOperativaEstado.textContent = 'Zona crítica alcanzada según la lectura del sensor lateral.';
+    elementos.alertaOperativaChip.textContent = 'REQUIERE RECOJO';
+    elementos.alertaOperativaEstado.textContent = 'Zona crítica alcanzada.';
+    elementos.canalAlerta.textContent = 'Notificación enviada al personal por WhatsApp.';
+    elementos.canalAlerta.hidden = false;
     elementos.alertaOperativaId.textContent = id.toUpperCase();
     elementos.alertaOperativaUbicacion.textContent = ubicacion;
     elementos.alertaOperativaNivel.textContent = `${formatearNumero(nivel)}%`;
     return;
   }
 
-  elementos.tituloAcciones.textContent = 'Alerta operativa';
-  elementos.alertaOperativaChip.textContent = !hayLecturaInterior
-    ? (hayMedicion ? 'SIN LECTURA INTERIOR' : 'SIN ALERTA ACTIVA')
-    : (nivel >= 70 ? 'ATENCIÓN PRÓXIMA' : 'OPERACIÓN NORMAL');
-  elementos.alertaOperativaEstado.textContent = hayMedicion && Number.isFinite(nivel)
-    ? `Nivel estimado: ${formatearNumero(nivel)}%. Sin alerta de recojo.`
-    : (hayMedicion ? 'Lectura interior no disponible.' : 'Esperando datos del sensor.');
+  if (atencionProxima) {
+    elementos.alertaOperativaChip.textContent = 'ATENCIÓN PRÓXIMA';
+    elementos.alertaOperativaEstado.textContent = 'Los residuos se aproximan a la zona crítica.';
+    elementos.canalAlerta.hidden = true;
+    return;
+  }
+
+  elementos.alertaOperativaChip.textContent = 'SIN ALERTA ACTIVA';
+  elementos.alertaOperativaEstado.textContent = 'El contenedor se encuentra disponible.';
+  elementos.canalAlerta.textContent = 'Notificación automática por WhatsApp habilitada.';
+  elementos.canalAlerta.hidden = false;
 }
 
 function mostrarSinDatos() {
@@ -720,7 +734,6 @@ function mostrarSinDatos() {
   elementos.ultimaActualizacion.textContent = '—';
   elementos.tiempoRelativo.textContent = 'Sin datos recibidos';
   elementos.alertaNivel.hidden = true;
-  elementos.alertaBtn.disabled = true;
   elementos.railSensorTexto.textContent = 'En espera';
   elementos.railTapaTexto.textContent = 'Sin datos';
   cambiarEstadoElemento(elementos.railSensor, '');
@@ -821,7 +834,6 @@ function mostrarEstado(datos) {
     timeZone: 'America/Lima'
   });
   elementos.tiempoRelativo.textContent = describirTiempoTranscurrido(fecha);
-  elementos.alertaBtn.disabled = alertaEnCurso || !hayLecturaInterior;
   if (!hayLecturaInterior && fecha.toISOString() !== ultimaLecturaInvalidaRegistrada) {
     ultimaLecturaInvalidaRegistrada = fecha.toISOString();
     registrarEvento('Lectura interior no disponible', 'No se muestra una estimación sin distancia lateral válida', 'sistema');
@@ -835,7 +847,6 @@ function mostrarEstado(datos) {
     elementos.alertaPorcentaje.textContent = `${formatearNumero(nivel)}% est.`;
   }
   actualizarAlertaOperativa({
-    requiereRecojo: requiereAlerta,
     id: identificador,
     ubicacion,
     nivel
@@ -845,25 +856,7 @@ function mostrarEstado(datos) {
   actualizarConexion();
 }
 
-function mostrarMensaje(texto, esError = false) {
-  window.clearTimeout(temporizadorMensaje);
-  elementos.mensaje.textContent = texto;
-  elementos.mensaje.classList.toggle('error', esError);
-  temporizadorMensaje = window.setTimeout(() => {
-    elementos.mensaje.textContent = '';
-    elementos.mensaje.classList.remove('error');
-  }, 6000);
-}
-
-async function leerRespuestaJson(respuesta) {
-  try {
-    return await respuesta.json();
-  } catch {
-    return {};
-  }
-}
-
-async function consultarEstado(mostrarConfirmacion = false) {
+async function consultarEstado() {
   if (consultaEnCurso) return;
 
   consultaEnCurso = true;
@@ -883,13 +876,11 @@ async function consultarEstado(mostrarConfirmacion = false) {
       conexionInterrumpida = false;
     }
     mostrarEstado(datos);
-    if (mostrarConfirmacion) mostrarMensaje('Telemetría actualizada correctamente.');
   } catch (error) {
     ultimaLatencia = Math.round(performance.now() - inicioConsulta);
     ultimoEstadoHttp = 'Error de conexión';
     servidorDisponible = false;
     conexionInterrumpida = true;
-    mostrarMensaje('No se pudo conectar con el servidor. Se conservan los últimos datos recibidos.', true);
     console.error('Error al consultar el estado:', error);
   } finally {
     consultaEnCurso = false;
@@ -898,51 +889,6 @@ async function consultarEstado(mostrarConfirmacion = false) {
   }
 }
 
-async function enviarAlerta() {
-  alertaEnCurso = true;
-  elementos.alertaBtn.disabled = true;
-
-  try {
-    const respuesta = await fetch('/api/alerta', { method: 'POST' });
-    const resultado = await leerRespuestaJson(respuesta);
-    if (!respuesta.ok) throw new Error(resultado.error || `El servidor respondió con estado ${respuesta.status}`);
-
-    const nivel = typeof resultado.alerta?.nivel === 'number'
-      ? ` (${formatearNumero(resultado.alerta.nivel)}%)`
-      : '';
-    mostrarMensaje(`Alerta registrada para ${resultado.alerta.ubicacion}${nivel}.`);
-  } catch (error) {
-    mostrarMensaje(error.message || 'No fue posible registrar la alerta.', true);
-    console.error('Error al registrar la alerta:', error);
-  } finally {
-    alertaEnCurso = false;
-    elementos.alertaBtn.disabled = !hayLecturaInterior;
-  }
-}
-
-async function ejecutarPrueba() {
-  elementos.probarBtn.disabled = true;
-
-  try {
-    const respuesta = await fetch('/api/prueba', { method: 'POST' });
-    const resultado = await leerRespuestaJson(respuesta);
-    if (!respuesta.ok) throw new Error(resultado.error || `El servidor respondió con estado ${respuesta.status}`);
-
-    servidorDisponible = true;
-    mostrarEstado(resultado.medicion);
-    mostrarMensaje('Simulación realizada: el tacho requiere recojo.');
-  } catch (error) {
-    mostrarMensaje('No fue posible ejecutar la simulación.', true);
-    console.error('Error durante la prueba:', error);
-  } finally {
-    elementos.probarBtn.disabled = false;
-    actualizarConexion();
-  }
-}
-
-elementos.actualizarBtn.addEventListener('click', () => consultarEstado(true));
-elementos.probarBtn.addEventListener('click', ejecutarPrueba);
-elementos.alertaBtn.addEventListener('click', enviarAlerta);
 elementos.monitoreoBtn.addEventListener('click', alternarMonitoreo);
 elementos.tabsVista.forEach((tab) => {
   tab.addEventListener('click', () => cambiarVista(tab.dataset.vista));

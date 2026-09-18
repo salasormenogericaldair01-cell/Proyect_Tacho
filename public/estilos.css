@@ -1849,7 +1849,7 @@ h1 span {
 
 .centro-alertas {
   display: grid;
-  grid-template-columns: auto 1fr auto;
+  grid-template-columns: auto minmax(0, 1fr);
   align-items: center;
   gap: 16px;
   padding: 19px 21px;
@@ -1859,7 +1859,7 @@ h1 span {
   box-shadow: var(--sombra);
 }
 
-.alerta-manual-icono {
+.alerta-operativa-icono {
   display: grid;
   place-items: center;
   width: 44px;
@@ -1895,88 +1895,6 @@ h1 span {
   margin: 5px 0 0;
   color: var(--texto-suave);
   font-size: .72rem;
-}
-
-.boton {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  min-height: 44px;
-  padding: 0 17px;
-  border: 0;
-  border-radius: 12px;
-  font-size: .75rem;
-  font-weight: 800;
-  cursor: pointer;
-  transition: transform .18s, box-shadow .18s, opacity .18s, background .18s;
-}
-
-.boton:hover:not(:disabled) {
-  transform: translateY(-2px);
-}
-
-.boton:focus-visible {
-  outline: 3px solid rgba(22, 173, 117, .24);
-  outline-offset: 3px;
-}
-
-.boton:disabled {
-  cursor: not-allowed;
-  opacity: .45;
-}
-
-.boton svg {
-  width: 17px;
-  height: 17px;
-}
-
-.alerta-btn {
-  min-width: 150px;
-  color: white;
-  background: #df444b;
-  box-shadow: 0 8px 19px rgba(189, 48, 56, .19);
-}
-
-.controles {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-direction: column-reverse;
-  gap: 20px;
-  min-height: 62px;
-}
-
-.acciones {
-  display: flex;
-  flex: 0 0 auto;
-  gap: 9px;
-  margin-top: 13px;
-}
-
-.boton-secundario {
-  color: var(--texto);
-  background: white;
-  border: 1px solid var(--borde);
-}
-
-.boton-prueba {
-  color: var(--verde-oscuro);
-  background: var(--verde-suave);
-  border: 1px solid #c5e9da;
-}
-
-.mensaje {
-  min-height: 18px;
-  margin: 13px 0 0;
-  color: var(--verde-oscuro);
-  font-size: .71rem;
-  font-weight: 650;
-  text-align: center;
-}
-
-.mensaje.error {
-  color: var(--rojo-oscuro);
 }
 
 /* Superficies oscuras para mantener una experiencia IoT inmersiva. */
@@ -2128,9 +2046,9 @@ h1 span {
   color: var(--verde);
 }
 
-.alerta-manual-icono {
-  color: var(--ambar);
-  background: rgba(242, 184, 75, .1);
+.alerta-operativa-icono {
+  color: var(--verde);
+  background: rgba(46, 230, 157, .1);
 }
 
 .titulo-con-chip span {
@@ -2145,8 +2063,14 @@ h1 span {
 .canal-alerta {
   display: block;
   margin-top: 8px;
-  color: #587067;
-  font-size: .56rem;
+  color: #9cc5b4;
+  font-size: .62rem;
+  line-height: 1.45;
+}
+
+.canal-alerta[hidden],
+.alerta-operativa-datos[hidden] {
+  display: none;
 }
 
 .alerta-operativa-datos {
@@ -2181,7 +2105,32 @@ h1 span {
   animation: alertaOperativaPulso 2.5s ease-in-out infinite;
 }
 
-.centro-alertas.alerta-activa .alerta-manual-icono {
+.centro-alertas.atencion-proxima {
+  border-color: rgba(242, 184, 75, .3);
+  box-shadow: 0 22px 52px rgba(0, 0, 0, .28), 0 0 24px rgba(242, 184, 75, .045);
+}
+
+.centro-alertas.atencion-proxima .alerta-operativa-icono {
+  color: var(--ambar);
+  background: rgba(242, 184, 75, .1);
+}
+
+.centro-alertas.atencion-proxima .titulo-con-chip span {
+  color: #f2c878;
+  background: rgba(242, 184, 75, .11);
+}
+
+.centro-alertas.sin-datos .alerta-operativa-icono {
+  color: #849b92;
+  background: rgba(128, 168, 153, .08);
+}
+
+.centro-alertas.sin-alerta .titulo-con-chip span {
+  color: var(--verde);
+  background: rgba(46, 230, 157, .1);
+}
+
+.centro-alertas.alerta-activa .alerta-operativa-icono {
   color: #ff8b8f;
   background: rgba(255, 92, 98, .12);
 }
@@ -2195,29 +2144,8 @@ h1 span {
   background: rgba(255, 92, 98, .11);
 }
 
-.boton-secundario {
-  color: #d9e9e3;
-  background: #0b211a;
-  border-color: rgba(128, 168, 153, .18);
-}
-
-.boton-secundario:hover:not(:disabled) {
-  background: #103027;
-  border-color: rgba(46, 230, 157, .26);
-}
-
-.boton-prueba {
-  color: var(--verde);
-  background: rgba(46, 230, 157, .09);
-  border-color: rgba(46, 230, 157, .19);
-}
-
-.mensaje {
-  color: var(--verde);
-}
-
-.mensaje.error {
-  color: #ff777d;
+.centro-alertas.alerta-activa .canal-alerta {
+  color: #ffb7b9;
 }
 
 /* Pulido visual del centro de monitoreo. */
@@ -2473,17 +2401,9 @@ body::after {
   background: linear-gradient(90deg, var(--rojo), transparent);
 }
 
-.boton {
-  box-shadow: inset 0 1px rgba(255, 255, 255, .06);
-}
-
-.alerta-btn {
-  background: linear-gradient(135deg, #e44b52, #b72d35);
-  box-shadow: 0 10px 24px rgba(189, 48, 56, .24), inset 0 1px rgba(255, 255, 255, .16);
-}
-
-.boton-prueba {
-  background: linear-gradient(135deg, rgba(46, 230, 157, .12), rgba(22, 173, 117, .06));
+.centro-alertas.atencion-proxima::before {
+  width: 120px;
+  background: linear-gradient(90deg, var(--ambar), transparent);
 }
 
 .animacion-entrada {
@@ -2702,34 +2622,6 @@ body.interfaz-lista .panel-inferior {
     right: 15px;
   }
 
-  .centro-alertas {
-    grid-template-columns: auto 1fr;
-  }
-
-  .alerta-btn {
-    grid-column: 1 / -1;
-    width: 100%;
-  }
-
-  .controles {
-    align-items: stretch;
-    flex-direction: column;
-    gap: 0;
-  }
-
-  .mensaje {
-    order: 2;
-    text-align: center;
-  }
-
-  .acciones {
-    width: 100%;
-  }
-
-  .acciones .boton {
-    flex: 1 1 0;
-  }
-
   .panel-interactivo {
     padding: 18px;
   }
@@ -2845,14 +2737,6 @@ body.interfaz-lista .panel-inferior {
     align-items: flex-start;
     flex-direction: column;
     gap: 5px;
-  }
-
-  .acciones {
-    flex-direction: column;
-  }
-
-  .acciones .boton {
-    width: 100%;
   }
 
   .grafico-cabecera {

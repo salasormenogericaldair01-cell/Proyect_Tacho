@@ -416,42 +416,24 @@
     </section>
 
     <section class="panel-inferior animacion-entrada">
-      <article id="centroAlertas" class="centro-alertas sin-alerta" aria-labelledby="tituloAcciones">
-        <div class="alerta-manual-icono" aria-hidden="true">
+      <article id="centroAlertas" class="centro-alertas sin-datos" aria-labelledby="tituloAcciones">
+        <div class="alerta-operativa-icono" aria-hidden="true">
           <svg><use href="#icon-campana"></use></svg>
         </div>
         <div class="centro-alertas-texto">
           <div class="titulo-con-chip">
             <h2 id="tituloAcciones">Alerta operativa</h2>
-            <span id="alertaOperativaChip">SIN ALERTA ACTIVA</span>
+            <span id="alertaOperativaChip">ESPERANDO DATOS</span>
           </div>
-          <p id="alertaOperativaEstado">Esperando una medición que requiera atención.</p>
+          <p id="alertaOperativaEstado" role="status" aria-live="polite">Esperando una medición válida del sensor interior.</p>
           <dl id="alertaOperativaDatos" class="alerta-operativa-datos" hidden>
             <div><dt>Tacho</dt><dd id="alertaOperativaId">TACHO-01</dd></div>
             <div><dt>Ubicación</dt><dd id="alertaOperativaUbicacion">Entrada principal</dd></div>
             <div><dt>Nivel estimado</dt><dd id="alertaOperativaNivel">—</dd></div>
           </dl>
-          <small class="canal-alerta">Registro interno disponible · Telegram no configurado</small>
+          <small id="canalAlerta" class="canal-alerta" hidden></small>
         </div>
-        <button id="alertaBtn" class="boton alerta-btn" type="button" disabled>
-          <svg aria-hidden="true"><use href="#icon-campana"></use></svg>
-          Registrar alerta
-        </button>
       </article>
-
-      <div class="controles">
-        <p id="mensaje" class="mensaje" role="status" aria-live="polite"></p>
-        <div class="acciones">
-          <button id="actualizarBtn" class="boton boton-secundario" type="button">
-            <svg aria-hidden="true"><use href="#icon-actualizar"></use></svg>
-            Actualizar
-          </button>
-          <button id="probarBtn" class="boton boton-prueba" type="button">
-            <svg aria-hidden="true"><use href="#icon-prueba"></use></svg>
-            Simular tacho lleno
-          </button>
-        </div>
-      </div>
     </section>
 
   </main>
